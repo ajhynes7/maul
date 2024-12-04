@@ -3,8 +3,6 @@ import argparse
 import pandas as pd
 from dataclasses import dataclass
 
-ALLOWABLE_RELATIVE_DIFFERENCE = 0.0035
-
 
 @dataclass
 class Player:
@@ -12,7 +10,7 @@ class Player:
     team: int
 
 
-def main(file_path: str):
+def main(file_path: str, floor_coeff: float, cap_coeff: float) -> None:
     df = pd.read_csv(file_path)
 
     df["Player"] = df["Player"].str.strip()
@@ -24,14 +22,14 @@ def main(file_path: str):
         team_salaries = df.groupby("Team").sum()["Salary"]
         mean_team_salary = team_salaries.mean()
 
-        salary_cap = mean_team_salary * (1 + ALLOWABLE_RELATIVE_DIFFERENCE)
-        salary_floor = mean_team_salary * (1 - ALLOWABLE_RELATIVE_DIFFERENCE)
+        salary_floor = mean_team_salary * floor_coeff
+        salary_cap = mean_team_salary * cap_coeff
 
         team_numbers = team_salaries.index
-        teams_over_cap = team_numbers[team_salaries > salary_cap]
         teams_under_floor = team_numbers[team_salaries < salary_floor]
+        teams_over_cap = team_numbers[team_salaries > salary_cap]
 
-        if not teams_over_cap.any() and not teams_under_floor.any():
+        if not teams_under_floor.any() and not teams_over_cap.any():
             print()
             print("All team salaries are between the floor and cap.")
             print(f"Salary floor: {salary_floor}, Salary cap: {salary_cap}")
@@ -101,6 +99,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("file_path", type=str, help="Path to the input file")
+
+    parser.add_argument("--floor-coeff", type=float, default=1 - 0.0035)
+    parser.add_argument("--cap-coeff", type=float, default=1 + 0.0035)
+
     args = parser.parse_args()
 
-    main(args.file_path)
+    main(args.file_path, args.floor_coeff, args.cap_coeff)
