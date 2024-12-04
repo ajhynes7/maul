@@ -58,8 +58,8 @@ def main():
 def find_best_trade(
     df: pd.DataFrame, team_salaries: pd.Series, salary_map: dict[str, int]
 ) -> tuple[Player, Player]:
-    team_number_i = int(team_salaries.idxmin())
-    team_number_j = int(team_salaries.idxmax())
+    team_number_i = int(team_salaries.idxmax())
+    team_number_j = int(team_salaries.idxmin())
 
     player_names_i = df[df["Team"] == team_number_i]["Player"]
     player_names_j = df[df["Team"] == team_number_j]["Player"]
