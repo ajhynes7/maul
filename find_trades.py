@@ -32,7 +32,7 @@ def main():
         if not teams_over_cap.any() and not teams_under_floor.any():
             print()
             print("All team salaries are between the floor and cap.")
-            print(f"Salary cap: {salary_cap}, Salary floor: {salary_floor}")
+            print(f"Salary floor: {salary_floor}, Salary cap: {salary_cap}")
 
             print()
             print("Final team salaries:")
