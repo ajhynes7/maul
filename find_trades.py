@@ -1,3 +1,5 @@
+import argparse
+
 import pandas as pd
 from dataclasses import dataclass
 
@@ -10,8 +12,8 @@ class Player:
     team: int
 
 
-def main():
-    df = pd.read_csv("data_2.csv")
+def main(file_path: str):
+    df = pd.read_csv(file_path)
 
     df["Player"] = df["Player"].str.strip()
     df["Salary"] = df["Salary"].str.replace("$", "").str.replace(",", "").astype(float)
@@ -96,4 +98,9 @@ def get_team_salary(team: list[str], salary_map: dict[str, int]) -> int:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("file_path", type=str, help="Path to the input file")
+    args = parser.parse_args()
+
+    main(args.file_path)
