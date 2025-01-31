@@ -1,5 +1,6 @@
 *.csv
 *.ipynb
 *.py[oc]
+*.xlsx
 .ipynb_checkpoints
 .venv
