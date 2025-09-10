@@ -1,5 +1,7 @@
+*.bru
 *.csv
 *.ipynb
+*.json
 *.py[oc]
 *.xlsx
 .ipynb_checkpoints
