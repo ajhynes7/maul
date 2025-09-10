@@ -1,6 +1,8 @@
+import csv
 import argparse
 
 import pandas as pd
+import numpy as np
 from dataclasses import dataclass
 
 
@@ -11,7 +13,7 @@ class Player:
 
 
 def main(file_path: str, floor_coeff: float, cap_coeff: float) -> None:
-    df = pd.read_csv(file_path)
+    df = read_parity_csv(file_path)
 
     df["Player"] = df["Player"].str.strip()
     df["Salary"] = df["Salary"].str.replace("$", "").str.replace(",", "").astype(float)
@@ -32,7 +34,7 @@ def main(file_path: str, floor_coeff: float, cap_coeff: float) -> None:
         if not teams_under_floor.any() and not teams_over_cap.any():
             print()
             print("All team salaries are between the floor and cap.")
-            print(f"Salary floor: {salary_floor}, Salary cap: {salary_cap}")
+            print(f"Salary floor: {salary_floor.round()}, Salary cap: {salary_cap.round()}")
 
             print()
             print("Final team salaries:")
@@ -53,6 +55,41 @@ def main(file_path: str, floor_coeff: float, cap_coeff: float) -> None:
 
         df.loc[index_i, "Team"] = team_number_j
         df.loc[index_j, "Team"] = team_number_i
+
+
+def read_parity_csv(file_path: str) -> pd.DataFrame:
+    rows = []
+
+    with open(file_path, mode="r") as file:
+        reader = csv.reader(file)
+
+        for i, row in enumerate(reader):
+            if i == 0:
+                continue
+
+            if row[0] == "Team Salary":
+                break
+
+            rows.append(row[:8])
+
+    arr = np.array(rows)
+    n_members = len(arr)
+
+    df = pd.DataFrame(
+        np.vstack(
+            [
+                np.hstack([arr[:, 0:2], np.ones((n_members, 1)) * 1]),
+                np.hstack([arr[:, 2:4], np.ones((n_members, 1)) * 2]),
+                np.hstack([arr[:, 4:6], np.ones((n_members, 1)) * 3]),
+                np.hstack([arr[:, 6:8], np.ones((n_members, 1)) * 4]),
+            ]
+        ),
+        columns=["Player", "Salary", "Team"],
+    )
+
+    df["Team"] = pd.to_numeric(df["Team"]).astype(int)
+
+    return df
 
 
 def find_best_trade(
