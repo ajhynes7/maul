@@ -1,4 +1,5 @@
-import csv
+import gspread
+
 import argparse
 
 import pandas as pd
@@ -12,8 +13,8 @@ class Player:
     team: int
 
 
-def main(file_path: str, floor_coeff: float, cap_coeff: float) -> None:
-    df = read_parity_csv(file_path)
+def main(floor_coeff: float, cap_coeff: float) -> None:
+    df = read_parity_sheet()
 
     df["Player"] = df["Player"].str.strip()
     df["Salary"] = df["Salary"].str.replace("$", "").str.replace(",", "").astype(float)
@@ -34,7 +35,9 @@ def main(file_path: str, floor_coeff: float, cap_coeff: float) -> None:
         if not teams_under_floor.any() and not teams_over_cap.any():
             print()
             print("All team salaries are between the floor and cap.")
-            print(f"Salary floor: {salary_floor.round()}, Salary cap: {salary_cap.round()}")
+            print(
+                f"Salary floor: {salary_floor.round()}, Salary cap: {salary_cap.round()}"
+            )
 
             print()
             print("Final team salaries:")
@@ -57,22 +60,13 @@ def main(file_path: str, floor_coeff: float, cap_coeff: float) -> None:
         df.loc[index_j, "Team"] = team_number_i
 
 
-def read_parity_csv(file_path: str) -> pd.DataFrame:
-    rows = []
+def read_parity_sheet() -> pd.DataFrame:
+    client = gspread.service_account()
+    sheet = client.open("2024 MAUL Parity League Master Sheet")
 
-    with open(file_path, mode="r") as file:
-        reader = csv.reader(file)
+    df = pd.DataFrame(sheet.worksheet("Team Composition Copy").get("A2:H13"))
 
-        for i, row in enumerate(reader):
-            if i == 0:
-                continue
-
-            if row[0] == "Team Salary":
-                break
-
-            rows.append(row[:8])
-
-    arr = np.array(rows)
+    arr = df.values
     n_members = len(arr)
 
     df = pd.DataFrame(
@@ -86,7 +80,6 @@ def read_parity_csv(file_path: str) -> pd.DataFrame:
         ),
         columns=["Player", "Salary", "Team"],
     )
-
     df["Team"] = pd.to_numeric(df["Team"]).astype(int)
 
     return df
@@ -135,11 +128,9 @@ def get_team_salary(team: list[str], salary_map: dict[str, int]) -> int:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("file_path", type=str, help="Path to the input file")
-
     parser.add_argument("--floor-coeff", type=float, default=1 - 0.0035)
     parser.add_argument("--cap-coeff", type=float, default=1 + 0.0035)
 
     args = parser.parse_args()
 
-    main(args.file_path, args.floor_coeff, args.cap_coeff)
+    main(args.floor_coeff, args.cap_coeff)
