@@ -1,9 +1,10 @@
-import gspread
-
+import os
 import argparse
 
-import pandas as pd
+import gspread
 import numpy as np
+import pandas as pd
+import yagmail
 from dataclasses import dataclass
 
 
@@ -21,6 +22,8 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
 
     salary_map = {player: salary for player, salary in zip(df["Player"], df["Salary"])}
 
+    email_contents = []
+
     while True:
         team_salaries = df.groupby("Team").sum()["Salary"]
         mean_team_salary = team_salaries.mean()
@@ -33,22 +36,21 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
         teams_over_cap = team_numbers[team_salaries > salary_cap]
 
         if not teams_under_floor.any() and not teams_over_cap.any():
-            print()
-            print("All team salaries are between the floor and cap.")
-            print(
+            email_contents.append("All team salaries are between the floor and cap.")
+            email_contents.append(
                 f"Salary floor: {salary_floor.round()}, Salary cap: {salary_cap.round()}"
             )
 
-            print()
-            print("Final team salaries:")
-            print(team_salaries.values)
+            email_contents.append(f"Final team salaries: {list(team_salaries.values)}")
 
             break
 
         best_player_to_trade_i, best_player_to_trade_j = find_best_trade(
             df, team_salaries, salary_map
         )
-        print(f"{best_player_to_trade_i}, {best_player_to_trade_j}")
+        email_contents.append(
+            f"Trade: {best_player_to_trade_i}, {best_player_to_trade_j}"
+        )
 
         index_i = df[df["Player"] == best_player_to_trade_i.name].index.item()
         index_j = df[df["Player"] == best_player_to_trade_j.name].index.item()
@@ -58,6 +60,18 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
 
         df.loc[index_i, "Team"] = team_number_j
         df.loc[index_j, "Team"] = team_number_i
+
+    MAUL_EMAIL = os.getenv("MAUL_EMAIL")
+    MAUL_PASSWORD = os.getenv("MAUL_PASSWORD")
+
+    with yagmail.SMTP(MAUL_EMAIL, MAUL_PASSWORD) as yag:
+        yag.send(
+            to="andrewjhynes@gmail.com",
+            subject="MAUL test",
+            contents="\n".join(email_contents),
+        )
+
+    print("Sent email successfully.")
 
 
 def read_parity_sheet() -> pd.DataFrame:
