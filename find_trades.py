@@ -22,7 +22,7 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
 
     salary_map = {player: salary for player, salary in zip(df["Player"], df["Salary"])}
 
-    email_contents = []
+    email_contents = ["Found trades:\n"]
 
     while True:
         team_salaries = df.groupby("Team").sum()["Salary"]
@@ -36,12 +36,15 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
         teams_over_cap = team_numbers[team_salaries > salary_cap]
 
         if not teams_under_floor.any() and not teams_over_cap.any():
-            email_contents.append("All team salaries are between the floor and cap.")
+            email_contents.append("\nAll team salaries are between the floor and cap.")
             email_contents.append(
-                f"Salary floor: {salary_floor.round()}, Salary cap: {salary_cap.round()}"
+                f"Salary floor: ${salary_floor.round():,.0f}"
+            )
+            email_contents.append(
+                f"Salary cap: ${salary_cap.round():,.0f}"
             )
 
-            email_contents.append(f"Final team salaries: {list(team_salaries.values)}")
+            email_contents.append("\nTeam salaries: " + ", ".join([f'${x:,.0f}' for x in team_salaries.values]))
 
             break
 
@@ -49,7 +52,8 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
             df, team_salaries, salary_map
         )
         email_contents.append(
-            f"Trade: {best_player_to_trade_i}, {best_player_to_trade_j}"
+            f"- {best_player_to_trade_i.name} (team {best_player_to_trade_i.team}) for "
+            f"{best_player_to_trade_j.name} (team {best_player_to_trade_j.team})"
         )
 
         index_i = df[df["Player"] == best_player_to_trade_i.name].index.item()
@@ -64,15 +68,17 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
     MAUL_EMAIL = os.getenv("MAUL_EMAIL")
     MAUL_PASSWORD = os.getenv("MAUL_PASSWORD")
 
+    print("\n".join(email_contents))
+
     with yagmail.SMTP(MAUL_EMAIL, MAUL_PASSWORD) as yag:
         yag.send(
             to="andrewjhynes@gmail.com",
             subject="MAUL test",
             contents="\n".join(email_contents),
         )
-
-    print("Sent email successfully.")
-
+    
+    print("\nSent email successfully.")
+    
 
 def read_parity_sheet() -> pd.DataFrame:
     client = gspread.service_account()
