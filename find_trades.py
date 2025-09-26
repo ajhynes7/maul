@@ -24,7 +24,7 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
 
     email_contents = ["Found trades:\n"]
 
-    while True:
+    for _ in range(100):
         team_salaries = df.groupby("Team").sum()["Salary"]
         mean_team_salary = team_salaries.mean()
 
@@ -67,6 +67,9 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
 
     MAUL_EMAIL = os.getenv("MAUL_EMAIL")
     MAUL_PASSWORD = os.getenv("MAUL_PASSWORD")
+
+    if not MAUL_EMAIL or not MAUL_PASSWORD:
+        raise AssertionError("Email/password not set.")
 
     print("\n".join(email_contents))
 
