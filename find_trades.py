@@ -22,7 +22,8 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
 
     salary_map = {player: salary for player, salary in zip(df["Player"], df["Salary"])}
 
-    email_contents = ["Found trades:\n"]
+    found_trades = False
+    email_contents = ["No trades required."]
 
     for _ in range(100):
         team_salaries = df.groupby("Team").sum()["Salary"]
@@ -37,14 +38,14 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
 
         if not teams_under_floor.any() and not teams_over_cap.any():
             email_contents.append("\nAll team salaries are between the floor and cap.")
-            email_contents.append(
-                f"Salary floor: ${salary_floor.round():,.0f}"
-            )
-            email_contents.append(
-                f"Salary cap: ${salary_cap.round():,.0f}"
-            )
 
-            email_contents.append("\nTeam salaries: " + ", ".join([f'${x:,.0f}' for x in team_salaries.values]))
+            email_contents.append(f"Salary floor: ${salary_floor.round():,.0f}")
+            email_contents.append(f"Salary cap: ${salary_cap.round():,.0f}")
+
+            email_contents.append(
+                "\nTeam salaries: "
+                + ", ".join([f"${x:,.0f}" for x in team_salaries.values])
+            )
 
             break
 
@@ -55,6 +56,7 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
             f"- {best_player_to_trade_i.name} (team {best_player_to_trade_i.team}) for "
             f"{best_player_to_trade_j.name} (team {best_player_to_trade_j.team})"
         )
+        found_trades = True
 
         index_i = df[df["Player"] == best_player_to_trade_i.name].index.item()
         index_j = df[df["Player"] == best_player_to_trade_j.name].index.item()
@@ -65,13 +67,16 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
         df.loc[index_i, "Team"] = team_number_j
         df.loc[index_j, "Team"] = team_number_i
 
+    if found_trades:
+        email_contents[0] = "Found trades:\n"
+
+    print("\n".join(email_contents))
+
     MAUL_EMAIL = os.getenv("MAUL_EMAIL")
     MAUL_PASSWORD = os.getenv("MAUL_PASSWORD")
 
     if not MAUL_EMAIL or not MAUL_PASSWORD:
         raise AssertionError("Email/password not set.")
-
-    print("\n".join(email_contents))
 
     with yagmail.SMTP(MAUL_EMAIL, MAUL_PASSWORD) as yag:
         yag.send(
@@ -79,9 +84,9 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
             subject="MAUL test",
             contents="\n".join(email_contents),
         )
-    
+
     print("\nSent email successfully.")
-    
+
 
 def read_parity_sheet() -> pd.DataFrame:
     client = gspread.service_account()
