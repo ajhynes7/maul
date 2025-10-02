@@ -1,11 +1,11 @@
 import os
 import argparse
+from dataclasses import dataclass
 
 import gspread
 import numpy as np
 import pandas as pd
 import yagmail
-from dataclasses import dataclass
 
 
 @dataclass
@@ -14,7 +14,7 @@ class Player:
     team: int
 
 
-def main(floor_coeff: float, cap_coeff: float) -> None:
+def main(floor_coeff: float, cap_coeff: float, send_email: bool) -> None:
     df = read_parity_sheet()
 
     df["Player"] = df["Player"].str.strip()
@@ -72,20 +72,21 @@ def main(floor_coeff: float, cap_coeff: float) -> None:
 
     print("\n".join(email_contents))
 
-    MAUL_EMAIL = os.getenv("MAUL_EMAIL")
-    MAUL_PASSWORD = os.getenv("MAUL_PASSWORD")
+    if send_email:
+        MAUL_EMAIL = os.getenv("MAUL_EMAIL")
+        MAUL_PASSWORD = os.getenv("MAUL_PASSWORD")
 
-    if not MAUL_EMAIL or not MAUL_PASSWORD:
-        raise AssertionError("Email/password not set.")
+        if not MAUL_EMAIL or not MAUL_PASSWORD:
+            raise AssertionError("Email/password not set.")
 
-    with yagmail.SMTP(MAUL_EMAIL, MAUL_PASSWORD) as yag:
-        yag.send(
-            to="andrewjhynes@gmail.com",
-            subject="MAUL test",
-            contents="\n".join(email_contents),
-        )
+        with yagmail.SMTP(MAUL_EMAIL, MAUL_PASSWORD) as yag:
+            yag.send(
+                to="andrewjhynes@gmail.com",
+                subject="MAUL test",
+                contents="\n".join(email_contents),
+            )
 
-    print("\nSent email successfully.")
+        print("\nSent email successfully.")
 
 
 def read_parity_sheet() -> pd.DataFrame:
@@ -159,6 +160,8 @@ if __name__ == "__main__":
     parser.add_argument("--floor-coeff", type=float, default=1 - 0.0035)
     parser.add_argument("--cap-coeff", type=float, default=1 + 0.0035)
 
+    parser.add_argument("--send-email", type=bool, default=False)
+
     args = parser.parse_args()
 
-    main(args.floor_coeff, args.cap_coeff)
+    main(args.floor_coeff, args.cap_coeff, args.send_email)
