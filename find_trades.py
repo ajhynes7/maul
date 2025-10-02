@@ -1,21 +1,22 @@
 import os
 import argparse
-from dataclasses import dataclass
 
 import pandas as pd
 import yagmail
 
-from util import read_parity_sheet
-
-
-@dataclass
-class Player:
-    name: str
-    team: int
+from models.player import Player
+from sqlmodel import Session, select, create_engine
 
 
 def main(floor_coeff: float, cap_coeff: float, send_email: bool) -> None:
-    df = read_parity_sheet()
+    engine = create_engine("sqlite:///maul.db")
+
+    with Session(engine) as session:
+        statement = select(Player)
+        players = session.exec(statement).all()
+
+    df = pd.DataFrame([player.model_dump() for player in players])
+
     salary_map = {player: salary for player, salary in zip(df["name"], df["salary"])}
 
     found_trades = False

@@ -16,6 +16,6 @@ if __name__ == "__main__":
         session.exec(text("DELETE FROM player;"))
 
         for row in df.itertuples():
-            session.add(Player(name=row.name))
+            session.add(Player(name=row.name, salary=row.salary, team=row.team))
 
         session.commit()
