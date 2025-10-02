@@ -2,10 +2,10 @@ import os
 import argparse
 from dataclasses import dataclass
 
-import gspread
-import numpy as np
 import pandas as pd
 import yagmail
+
+from util import read_parity_sheet
 
 
 @dataclass
@@ -16,17 +16,13 @@ class Player:
 
 def main(floor_coeff: float, cap_coeff: float, send_email: bool) -> None:
     df = read_parity_sheet()
-
-    df["Player"] = df["Player"].str.strip()
-    df["Salary"] = df["Salary"].str.replace("$", "").str.replace(",", "").astype(float)
-
-    salary_map = {player: salary for player, salary in zip(df["Player"], df["Salary"])}
+    salary_map = {player: salary for player, salary in zip(df["name"], df["salary"])}
 
     found_trades = False
     email_contents = ["No trades required."]
 
     for _ in range(100):
-        team_salaries = df.groupby("Team").sum()["Salary"]
+        team_salaries = df.groupby("team").sum()["salary"]
         mean_team_salary = team_salaries.mean()
 
         salary_floor = mean_team_salary * floor_coeff
@@ -58,14 +54,14 @@ def main(floor_coeff: float, cap_coeff: float, send_email: bool) -> None:
         )
         found_trades = True
 
-        index_i = df[df["Player"] == best_player_to_trade_i.name].index.item()
-        index_j = df[df["Player"] == best_player_to_trade_j.name].index.item()
+        index_i = df[df["name"] == best_player_to_trade_i.name].index.item()
+        index_j = df[df["name"] == best_player_to_trade_j.name].index.item()
 
-        team_number_i = df.loc[index_i, "Team"]
-        team_number_j = df.loc[index_j, "Team"]
+        team_number_i = df.loc[index_i, "team"]
+        team_number_j = df.loc[index_j, "team"]
 
-        df.loc[index_i, "Team"] = team_number_j
-        df.loc[index_j, "Team"] = team_number_i
+        df.loc[index_i, "team"] = team_number_j
+        df.loc[index_j, "team"] = team_number_i
 
     if found_trades:
         email_contents[0] = "Found trades:\n"
@@ -89,39 +85,14 @@ def main(floor_coeff: float, cap_coeff: float, send_email: bool) -> None:
         print("\nSent email successfully.")
 
 
-def read_parity_sheet() -> pd.DataFrame:
-    client = gspread.service_account()
-    sheet = client.open("2024 MAUL Parity League Master Sheet")
-
-    df = pd.DataFrame(sheet.worksheet("Team Composition Copy").get("A2:H13"))
-
-    arr = df.values
-    n_members = len(arr)
-
-    df = pd.DataFrame(
-        np.vstack(
-            [
-                np.hstack([arr[:, 0:2], np.ones((n_members, 1)) * 1]),
-                np.hstack([arr[:, 2:4], np.ones((n_members, 1)) * 2]),
-                np.hstack([arr[:, 4:6], np.ones((n_members, 1)) * 3]),
-                np.hstack([arr[:, 6:8], np.ones((n_members, 1)) * 4]),
-            ]
-        ),
-        columns=["Player", "Salary", "Team"],
-    )
-    df["Team"] = pd.to_numeric(df["Team"]).astype(int)
-
-    return df
-
-
 def find_best_trade(
     df: pd.DataFrame, team_salaries: pd.Series, salary_map: dict[str, int]
 ) -> tuple[Player, Player]:
     team_number_i = int(team_salaries.idxmax())
     team_number_j = int(team_salaries.idxmin())
 
-    player_names_i = df[df["Team"] == team_number_i]["Player"]
-    player_names_j = df[df["Team"] == team_number_j]["Player"]
+    player_names_i = df[df["team"] == team_number_i]["name"]
+    player_names_j = df[df["team"] == team_number_j]["name"]
 
     min_team_salary_difference = 1e9
     best_trade = None

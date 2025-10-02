@@ -1,5 +1,6 @@
 *.bru
 *.csv
+*.db
 *.ipynb
 *.json
 *.py[oc]
