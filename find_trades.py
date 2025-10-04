@@ -8,7 +8,7 @@ from models.player import Player
 from sqlmodel import Session, select, create_engine
 
 
-def main(floor_coeff: float, cap_coeff: float, send_email: bool) -> None:
+def main(relative_difference: float, send_email: bool) -> None:
     engine = create_engine("sqlite:///maul.db")
 
     with Session(engine) as session:
@@ -29,14 +29,14 @@ def main(floor_coeff: float, cap_coeff: float, send_email: bool) -> None:
         team_salary_range = team_salaries.max() - team_salaries.min()
 
         if team_salary_range > prev_team_salary_range:
-            raise AssertionError("The team salary range should be decreasing.")
+            raise AssertionError("Unable to find trades. Consider increasing the relative difference.")
 
         prev_team_salary_range = team_salary_range
 
         mean_team_salary = team_salaries.mean()
 
-        salary_floor = mean_team_salary * floor_coeff
-        salary_cap = mean_team_salary * cap_coeff
+        salary_floor = mean_team_salary * (1 - relative_difference)
+        salary_cap = mean_team_salary * (1 + relative_difference)
 
         team_numbers = team_salaries.index
         teams_under_floor = team_numbers[team_salaries < salary_floor]
@@ -161,11 +161,9 @@ def get_team_salary(team: list[str], salary_map: dict[str, int]) -> int:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--floor-coeff", type=float, default=1 - 0.0035)
-    parser.add_argument("--cap-coeff", type=float, default=1 + 0.0035)
-
+    parser.add_argument("--rel-diff", type=float, default=0.0035)
     parser.add_argument("--send-email", type=bool, default=False)
 
     args = parser.parse_args()
 
-    main(args.floor_coeff, args.cap_coeff, args.send_email)
+    main(args.rel_diff, args.send_email)
