@@ -22,8 +22,17 @@ def main(floor_coeff: float, cap_coeff: float, send_email: bool) -> None:
     found_trades = False
     email_contents = ["No trades required."]
 
-    for _ in range(100):
+    prev_team_salary_range = 1e9
+
+    for _ in range(10):
         team_salaries = df.groupby("team").sum()["salary"]
+        team_salary_range = team_salaries.max() - team_salaries.min()
+
+        if team_salary_range > prev_team_salary_range:
+            raise AssertionError("The team salary range should be decreasing.")
+
+        prev_team_salary_range = team_salary_range
+
         mean_team_salary = team_salaries.mean()
 
         salary_floor = mean_team_salary * floor_coeff
@@ -46,20 +55,25 @@ def main(floor_coeff: float, cap_coeff: float, send_email: bool) -> None:
 
             break
 
-        best_player_to_trade_i, best_player_to_trade_j = find_best_trade(
+        (player_name_i, team_i), (player_name_j, team_j) = find_best_trade(
             df, team_salaries, salary_map
         )
         email_contents.append(
-            f"- {best_player_to_trade_i.name} (team {best_player_to_trade_i.team}) for "
-            f"{best_player_to_trade_j.name} (team {best_player_to_trade_j.team})"
+            f"- {player_name_i} (team {team_i}) for {player_name_j} (team {team_j})"
         )
         found_trades = True
 
-        index_i = df[df["name"] == best_player_to_trade_i.name].index.item()
-        index_j = df[df["name"] == best_player_to_trade_j.name].index.item()
+        index_i = df[df["name"] == player_name_i].index.item()
+        index_j = df[df["name"] == player_name_j].index.item()
+
+        if index_i == index_j:
+            raise AssertionError("The player indices must be different.")
 
         team_number_i = df.loc[index_i, "team"]
         team_number_j = df.loc[index_j, "team"]
+
+        if team_number_i == team_number_j:
+            raise AssertionError("The team numbers must be different.")
 
         df.loc[index_i, "team"] = team_number_j
         df.loc[index_j, "team"] = team_number_i
@@ -88,35 +102,42 @@ def main(floor_coeff: float, cap_coeff: float, send_email: bool) -> None:
 
 def find_best_trade(
     df: pd.DataFrame, team_salaries: pd.Series, salary_map: dict[str, int]
-) -> tuple[Player, Player]:
+):
     team_number_i = int(team_salaries.idxmax())
     team_number_j = int(team_salaries.idxmin())
 
-    player_names_i = df[df["team"] == team_number_i]["name"]
-    player_names_j = df[df["team"] == team_number_j]["name"]
+    player_indices_i = df[df["team"] == team_number_i]["name"].index
+    player_indices_j = df[df["team"] == team_number_j]["name"].index
 
     min_team_salary_difference = 1e9
     best_trade = None
 
-    for player_name_i in player_names_i:
-        for player_name_j in player_names_j:
-            new_players_i = (set(player_names_i.values) - {player_name_i}) | {
-                player_name_j
+    for player_index_i in player_indices_i:
+        for player_index_j in player_indices_j:
+            new_player_indices_i = (set(player_indices_i) - {player_index_i}) | {
+                player_index_j
             }
-            new_players_j = (set(player_names_j.values) - {player_name_j}) | {
-                player_name_i
+            new_player_indices_j = (set(player_indices_j) - {player_index_j}) | {
+                player_index_i
             }
 
-            new_team_salary_i = get_team_salary(new_players_i, salary_map)
-            new_team_salary_j = get_team_salary(new_players_j, salary_map)
+            new_player_names_i = df["name"].loc[list(new_player_indices_i)]
+            new_player_names_j = df["name"].loc[list(new_player_indices_j)]
+
+            new_team_salary_i = get_team_salary(new_player_names_i, salary_map)
+            new_team_salary_j = get_team_salary(new_player_names_j, salary_map)
 
             new_team_salary_difference = abs(new_team_salary_i - new_team_salary_j)
 
             if new_team_salary_difference < min_team_salary_difference:
                 min_team_salary_difference = new_team_salary_difference
+
+                row_i = df.loc[player_index_i]
+                row_j = df.loc[player_index_j]
+
                 best_trade = (
-                    Player(name=player_name_i, team=team_number_i),
-                    Player(name=player_name_j, team=team_number_j),
+                    (row_i["name"], team_number_i),
+                    (row_j["name"], team_number_j),
                 )
 
     return best_trade
