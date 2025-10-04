@@ -1,4 +1,5 @@
 import gspread
+from collections import Counter
 import numpy as np
 import pandas as pd
 
@@ -30,3 +31,32 @@ def read_parity_sheet() -> pd.DataFrame:
     df = df.map(lambda x: x.strip() if isinstance(x, str) else x)
 
     return df
+
+
+def read_trade_sheet() -> tuple[dict, set]:
+    client = gspread.service_account()
+    sheet = client.open("2024 MAUL Parity League Master Sheet")
+
+    df_trades = pd.DataFrame(
+        sheet.worksheet("Trade List").get("B3:G100"),
+        columns=["week", "team_1", "player_1", "team_2", "player_2"],
+    )
+
+    traded_player_names = []
+
+    for row in df_trades.itertuples():
+        if row.player_1:
+            traded_player_names.append(row.player_1)
+            traded_player_names.append(row.player_2)
+
+    previously_traded = set()
+
+    last_week = df_trades["week"].max()
+
+    for row in df_trades[df_trades["week"] == last_week].itertuples():
+        previously_traded.add(row.player_1)
+        previously_traded.add(row.player_2)
+
+    trade_counts = Counter(traded_player_names)
+
+    return trade_counts, previously_traded
