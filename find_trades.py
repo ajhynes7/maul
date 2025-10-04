@@ -8,7 +8,7 @@ from models.player import Player
 from sqlmodel import Session, select, create_engine
 
 
-def main(relative_difference: float, send_email: bool) -> None:
+def main(relative_difference: float, trade_rules: bool, send_email: bool) -> None:
     engine = create_engine("sqlite:///maul.db")
 
     with Session(engine) as session:
@@ -29,7 +29,9 @@ def main(relative_difference: float, send_email: bool) -> None:
         team_salary_range = team_salaries.max() - team_salaries.min()
 
         if team_salary_range > prev_team_salary_range:
-            raise AssertionError("Unable to find trades. Consider increasing the relative difference.")
+            raise AssertionError(
+                "Unable to find trades. Consider increasing the relative difference."
+            )
 
         prev_team_salary_range = team_salary_range
 
@@ -56,7 +58,7 @@ def main(relative_difference: float, send_email: bool) -> None:
             break
 
         (player_name_i, team_i), (player_name_j, team_j) = find_best_trade(
-            df, team_salaries, salary_map
+            df, team_salaries, salary_map, trade_rules
         )
         email_contents.append(
             f"- {player_name_i} (team {team_i}) for {player_name_j} (team {team_j})"
@@ -105,7 +107,10 @@ def main(relative_difference: float, send_email: bool) -> None:
 
 
 def find_best_trade(
-    df: pd.DataFrame, team_salaries: pd.Series, salary_map: dict[str, int]
+    df: pd.DataFrame,
+    team_salaries: pd.Series,
+    salary_map: dict[str, int],
+    trade_rules: bool,
 ):
     team_number_i = int(team_salaries.idxmax())
     team_number_j = int(team_salaries.idxmin())
@@ -119,13 +124,13 @@ def find_best_trade(
     for player_index_i in player_indices_i:
         row_i = df.loc[player_index_i]
 
-        if row_i.traded_last_time or row_i.trade_count > 3:
+        if trade_rules and (row_i.traded_last_time or row_i.trade_count > 3):
             continue
 
         for player_index_j in player_indices_j:
             row_j = df.loc[player_index_j]
 
-            if row_j.traded_last_time or row_i.trade_count > 3:
+            if trade_rules and (row_j.traded_last_time or row_i.trade_count > 3):
                 continue
 
             new_player_indices_i = (set(player_indices_i) - {player_index_i}) | {
@@ -162,8 +167,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--rel-diff", type=float, default=0.0035)
-    parser.add_argument("--send-email", type=bool, default=False)
+    parser.add_argument("--trade-rules", action="store_true")
+    parser.add_argument("--send-email", action="store_true")
 
     args = parser.parse_args()
 
-    main(args.rel_diff, args.send_email)
+    main(args.rel_diff, args.trade_rules, args.send_email)
