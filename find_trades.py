@@ -78,6 +78,10 @@ def main(floor_coeff: float, cap_coeff: float, send_email: bool) -> None:
         df.loc[index_i, "team"] = team_number_j
         df.loc[index_j, "team"] = team_number_i
 
+        # Avoid trading the same player again.
+        df.loc[index_i, "traded_last_time"] = True
+        df.loc[index_j, "traded_last_time"] = True
+
     if found_trades:
         email_contents[0] = "Found trades:\n"
 
@@ -113,7 +117,17 @@ def find_best_trade(
     best_trade = None
 
     for player_index_i in player_indices_i:
+        row_i = df.loc[player_index_i]
+
+        if row_i.traded_last_time or row_i.trade_count > 3:
+            continue
+
         for player_index_j in player_indices_j:
+            row_j = df.loc[player_index_j]
+
+            if row_j.traded_last_time or row_i.trade_count > 3:
+                continue
+
             new_player_indices_i = (set(player_indices_i) - {player_index_i}) | {
                 player_index_j
             }
@@ -131,9 +145,6 @@ def find_best_trade(
 
             if new_team_salary_difference < min_team_salary_difference:
                 min_team_salary_difference = new_team_salary_difference
-
-                row_i = df.loc[player_index_i]
-                row_j = df.loc[player_index_j]
 
                 best_trade = (
                     (row_i["name"], team_number_i),
