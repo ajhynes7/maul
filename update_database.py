@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel, Session, create_engine, text
 
-from util import read_parity_sheet, read_trade_sheet
+from util import SheetReader
 from models.player import Player
 
 
@@ -10,8 +10,9 @@ if __name__ == "__main__":
 
     SQLModel.metadata.create_all(engine)
 
-    df = read_parity_sheet()
-    trade_counts, traded_last_time = read_trade_sheet()
+    reader = SheetReader()
+    df = reader.read_player_worksheet()
+    trade_counts, traded_last_time = reader.read_trade_worksheet()
 
     with Session(engine) as session:
         session.exec(text("DELETE FROM player;"))
