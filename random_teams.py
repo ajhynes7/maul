@@ -62,7 +62,7 @@ def get_team_salary(team: list[str], salary_map: dict[str, int]) -> int:
 
 def minimize_salary_range(
     players: list[str], salary_map: dict[str, int], n_teams: int, n_iterations: int
-)-> tuple[list[str], float]:
+) -> tuple[list[str], float]:
     min_salary_range = math.inf
     final_teams = []
 
