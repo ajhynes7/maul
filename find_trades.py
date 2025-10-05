@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import argparse
 
 import pandas as pd
@@ -29,7 +30,7 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
         team_salary_range = team_salaries.max() - team_salaries.min()
 
         if team_salary_range > prev_team_salary_range:
-            raise AssertionError(
+            raise ValueError(
                 "Unable to find trades. Consider increasing the relative difference."
             )
 
@@ -69,13 +70,13 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
         index_j = df[df["name"] == player_name_j].index.item()
 
         if index_i == index_j:
-            raise AssertionError("The player indices must be different.")
+            raise ValueError("The player indices must be different.")
 
         team_number_i = df.loc[index_i, "team"]
         team_number_j = df.loc[index_j, "team"]
 
         if team_number_i == team_number_j:
-            raise AssertionError("The team numbers must be different.")
+            raise ValueError("The team numbers must be different.")
 
         df.loc[index_i, "team"] = team_number_j
         df.loc[index_j, "team"] = team_number_i
@@ -94,7 +95,7 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
         MAUL_PASSWORD = os.getenv("MAUL_PASSWORD")
 
         if not MAUL_EMAIL or not MAUL_PASSWORD:
-            raise AssertionError("Email/password not set.")
+            raise ValueError("Email/password not set.")
 
         with yagmail.SMTP(MAUL_EMAIL, MAUL_PASSWORD) as yag:
             yag.send(
@@ -124,6 +125,9 @@ def find_best_trade(
     for player_index_i in player_indices_i:
         row_i = df.loc[player_index_i]
 
+        if row_i.salary is None:
+            print(row_i)
+
         if trade_rules and (row_i.traded_last_time or row_i.trade_count > 3):
             continue
 
@@ -147,6 +151,9 @@ def find_best_trade(
             new_team_salary_j = get_team_salary(new_player_names_j, salary_map)
 
             new_team_salary_difference = abs(new_team_salary_i - new_team_salary_j)
+
+            if np.isnan(new_team_salary_difference):
+                raise ValueError("Encountered a NaN team salary difference.")
 
             if new_team_salary_difference < min_team_salary_difference:
                 min_team_salary_difference = new_team_salary_difference
