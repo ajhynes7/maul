@@ -18,6 +18,9 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
 
     df = pd.DataFrame([player.model_dump() for player in players])
 
+    if (df["salary"] <= 0).any():
+        raise ValueError("All salaries should be positive.")
+
     salary_map = {player: salary for player, salary in zip(df["name"], df["salary"])}
 
     found_trades = False
@@ -124,9 +127,6 @@ def find_best_trade(
 
     for player_index_i in player_indices_i:
         row_i = df.loc[player_index_i]
-
-        if row_i.salary is None:
-            print(row_i)
 
         if trade_rules and (row_i.traded_last_time or row_i.trade_count > 3):
             continue
