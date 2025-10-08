@@ -11,9 +11,7 @@ class SheetReader:
 
     def read_player_worksheet(self) -> pd.DataFrame:
         df = pd.DataFrame(
-            self.sheet.worksheet("Team Composition Copy").get(
-                "A2:H13", maintain_size=True
-            )
+            self.sheet.worksheet("Team Composition").get("A2:H13", maintain_size=True)
         )
 
         arr = df.values
