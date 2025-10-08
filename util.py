@@ -7,10 +7,14 @@ import pandas as pd
 class SheetReader:
     def __init__(self):
         client = gspread.service_account()
-        self.sheet = client.open("2024 MAUL Parity League Master Sheet")
+        self.sheet = client.open("2025 MAUL Parity League Master Sheet")
 
     def read_player_worksheet(self) -> pd.DataFrame:
-        df = pd.DataFrame(self.sheet.worksheet("Team Composition Copy").get("A2:H13"))
+        df = pd.DataFrame(
+            self.sheet.worksheet("Team Composition Copy").get(
+                "A2:H13", maintain_size=True
+            )
+        )
 
         arr = df.values
         n_members = len(arr)
@@ -37,26 +41,30 @@ class SheetReader:
         return df
 
     def read_trade_worksheet(self) -> tuple[dict, set]:
-        df_trades = pd.DataFrame(
-            self.sheet.worksheet("Trade List").get("B3:G100"),
-            columns=["week", "team_1", "player_1", "team_2", "player_2"],
-        )
+        try:
+            df_trades = pd.DataFrame(
+                self.sheet.worksheet("Trade List").get("B3:F100"),
+                columns=["week", "team_1", "player_1", "team_2", "player_2"],
+            )
 
-        traded_player_names = []
+            traded_player_names = []
 
-        for row in df_trades.itertuples():
-            if row.player_1:
-                traded_player_names.append(row.player_1)
-                traded_player_names.append(row.player_2)
+            for row in df_trades.itertuples():
+                if row.player_1:
+                    traded_player_names.append(row.player_1)
+                    traded_player_names.append(row.player_2)
 
-        previously_traded = set()
+            previously_traded = set()
 
-        last_week = df_trades["week"].max()
+            last_week = df_trades["week"].max()
 
-        for row in df_trades[df_trades["week"] == last_week].itertuples():
-            previously_traded.add(row.player_1)
-            previously_traded.add(row.player_2)
+            for row in df_trades[df_trades["week"] == last_week].itertuples():
+                previously_traded.add(row.player_1)
+                previously_traded.add(row.player_2)
 
-        trade_counts = Counter(traded_player_names)
+            trade_counts = Counter(traded_player_names)
 
-        return trade_counts, previously_traded
+            return trade_counts, previously_traded
+
+        except ValueError:
+            return dict(), set()
