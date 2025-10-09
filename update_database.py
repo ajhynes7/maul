@@ -11,14 +11,24 @@ if __name__ == "__main__":
     SQLModel.metadata.create_all(engine)
 
     reader = SheetReader()
-    df = reader.read_player_worksheet()
-    trade_counts, traded_last_time = reader.read_trade_worksheet()
+    df_salaries = reader.read_team_composition_worksheet()
+    trade_counts, traded_last_time = reader.read_trades_worksheet()
+
+    df_stats = reader.read_player_database_worksheet()
+
+    df = df_salaries.join(df_stats)
 
     with Session(engine) as session:
         session.exec(text("DELETE FROM player;"))
 
-        for row in df.itertuples():
-            player = Player(name=row.name, salary=row.salary, team=row.team)
+        for _, row in df.iterrows():
+            player = Player(
+                name=row.name,
+                salary=row["salary"],
+                team=row["team"],
+                games_attended=row["Games Attended"],
+                goals=row["Goals"],
+            )
 
             if trade_count := trade_counts.get(player.name):
                 player.trade_count = trade_count

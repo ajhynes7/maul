@@ -11,3 +11,6 @@ class Player(SQLModel, table=True):
 
     trade_count: int = Field(default=0)
     traded_last_time: bool = Field(default=False)
+
+    games_attended: int = Field(default=0)
+    goals: int = Field(default=0)

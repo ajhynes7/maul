@@ -9,10 +9,8 @@ class SheetReader:
         client = gspread.service_account()
         self.sheet = client.open("2025 MAUL Parity League Master Sheet")
 
-    def read_player_worksheet(self) -> pd.DataFrame:
-        df = pd.DataFrame(
-            self.sheet.worksheet("Team Composition").get("A2:H13", maintain_size=True)
-        )
+    def read_team_composition_worksheet(self) -> pd.DataFrame:
+        df = pd.DataFrame(self.sheet.worksheet("Team Composition").get("A2:H13"))
 
         arr = df.values
         n_members = len(arr)
@@ -35,10 +33,11 @@ class SheetReader:
         )
 
         df = df.map(lambda x: x.strip() if isinstance(x, str) else x)
+        df = df.set_index("name")
 
         return df
 
-    def read_trade_worksheet(self) -> tuple[dict, set]:
+    def read_trades_worksheet(self) -> tuple[dict, set]:
         try:
             df_trades = pd.DataFrame(
                 self.sheet.worksheet("Trade List").get("B3:F100"),
@@ -66,3 +65,13 @@ class SheetReader:
 
         except ValueError:
             return dict(), set()
+
+    def read_player_database_worksheet(self) -> pd.DataFrame:
+        df = pd.DataFrame(self.sheet.worksheet("Player Database").get("A1:Z100"))
+
+        df.columns = df.iloc[0]
+        df = df[1:]
+
+        df = df.set_index("Name")
+
+        return df
