@@ -139,7 +139,7 @@ def find_best_trade(df: pd.DataFrame, trade_rules: bool):
                     row_j = df.loc[player_index_j]
 
                     if trade_rules and (
-                        row_j.traded_last_time or row_i.trade_count > 3
+                        row_j.traded_last_time or row_j.trade_count > 3
                     ):
                         continue
 
