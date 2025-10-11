@@ -80,18 +80,18 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
         if index_i == index_j:
             raise ValueError("The player indices must be different.")
 
-        team_number_i = df.loc[index_i, "team"]
-        team_number_j = df.loc[index_j, "team"]
+        team_number_i = df.at[index_i, "team"]
+        team_number_j = df.at[index_j, "team"]
 
         if team_number_i == team_number_j:
             raise ValueError("The team numbers must be different.")
 
-        df.loc[index_i, "team"] = team_number_j
-        df.loc[index_j, "team"] = team_number_i
+        df.at[index_i, "team"] = team_number_j
+        df.at[index_j, "team"] = team_number_i
 
         # Avoid trading the same player again.
-        df.loc[index_i, "traded_last_time"] = True
-        df.loc[index_j, "traded_last_time"] = True
+        df.at[index_i, "traded_last_time"] = True
+        df.at[index_j, "traded_last_time"] = True
 
     if found_trades:
         email_contents[0] = "Found trades:\n"
@@ -144,8 +144,8 @@ def find_best_trade(df: pd.DataFrame, trade_rules: bool):
                         continue
 
                     df_copy = df.copy(deep=True)
-                    df_copy.loc[player_index_i, "team"] = team_number_j
-                    df_copy.loc[player_index_j, "team"] = team_number_i
+                    df_copy.at[player_index_i, "team"] = team_number_j
+                    df_copy.at[player_index_j, "team"] = team_number_i
 
                     sums_by_team = df_copy.groupby("team").sum()
                     cost_salary = sums_by_team["salary"].var() / df_copy["salary"].var()
