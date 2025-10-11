@@ -32,6 +32,8 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
     found_trades = False
     email_contents = ["No trades required."]
 
+    min_cost = math.inf
+
     for _ in range(10):
         team_sums = df.groupby("team").sum()
         team_salaries = team_sums["salary"]
@@ -50,25 +52,16 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
             email_contents.append(f"Salary floor: ${salary_floor.round():,.0f}")
             email_contents.append(f"Salary cap: ${salary_cap.round():,.0f}")
 
-            email_contents.append(
-                "\nTeam salaries: " + ", ".join([f"${x:,.0f}" for x in team_salaries])
-            )
-            email_contents.append(
-                "\nExpected team goals: "
-                + ", ".join([f"{x:.0f}" for x in team_sums["expected_goals_per_game"]])
-            )
-            email_contents.append(
-                "\nExpected team assists: "
-                + ", ".join(
-                    [f"{x:.0f}" for x in team_sums["expected_assists_per_game"]]
-                )
-            )
-
             break
 
-        (player_name_i, team_i), (player_name_j, team_j) = find_best_trade(
-            df, trade_rules
-        )
+        best_trade, min_cost = find_best_trade(df, trade_rules, min_cost=min_cost)
+
+        try:
+            (player_name_i, team_i), (player_name_j, team_j) = best_trade
+        except TypeError:
+            email_contents.append("\nNo better trade could be found.")
+            break
+
         email_contents.append(
             f"- {player_name_i} (team {team_i}) for {player_name_j} (team {team_j})"
         )
@@ -96,6 +89,18 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
     if found_trades:
         email_contents[0] = "Found trades:\n"
 
+    email_contents.append(
+        "\nTeam salaries: " + ", ".join([f"${x:,.0f}" for x in team_salaries])
+    )
+    email_contents.append(
+        "\nExpected team goals: "
+        + ", ".join([f"{x:.0f}" for x in team_sums["expected_goals_per_game"]])
+    )
+    email_contents.append(
+        "\nExpected team assists: "
+        + ", ".join([f"{x:.0f}" for x in team_sums["expected_assists_per_game"]])
+    )
+
     print("\n".join(email_contents))
 
     if send_email:
@@ -115,11 +120,15 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
         print("\nSent email successfully.")
 
 
-def find_best_trade(df: pd.DataFrame, trade_rules: bool):
+def find_best_trade(df: pd.DataFrame, trade_rules: bool, min_cost: float = None):
     n_teams = df.team.max()
 
-    min_cost = math.inf
+    min_cost = min_cost or math.inf
     best_trade = None
+
+    salary_var = df["salary"].var()
+    goals_var = df["expected_goals_per_game"].var()
+    assists_var = df["expected_assists_per_game"].var()
 
     for i in range(n_teams - 1):
         team_number_i = i + 1
@@ -148,14 +157,12 @@ def find_best_trade(df: pd.DataFrame, trade_rules: bool):
                     df_copy.at[player_index_j, "team"] = team_number_i
 
                     sums_by_team = df_copy.groupby("team").sum()
-                    cost_salary = sums_by_team["salary"].var() / df_copy["salary"].var()
+                    cost_salary = sums_by_team["salary"].var() / salary_var
                     cost_goals = (
-                        sums_by_team["expected_goals_per_game"].var()
-                        / df_copy["goals"].var()
+                        sums_by_team["expected_goals_per_game"].var() / goals_var
                     )
                     cost_assists = (
-                        sums_by_team["expected_assists_per_game"].var()
-                        / df_copy["assists"].var()
+                        sums_by_team["expected_assists_per_game"].var() / assists_var
                     )
                     cost = cost_salary + cost_goals + cost_assists
 
@@ -167,7 +174,7 @@ def find_best_trade(df: pd.DataFrame, trade_rules: bool):
                             (row_j["name"], team_number_j),
                         )
 
-    return best_trade
+    return best_trade, min_cost
 
 
 if __name__ == "__main__":
