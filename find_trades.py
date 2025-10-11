@@ -1,5 +1,5 @@
 import os
-import numpy as np
+import math
 import argparse
 
 import pandas as pd
@@ -21,24 +21,11 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
     if (df["salary"] <= 0).any():
         raise ValueError("All salaries should be positive.")
 
-    salary_map = {player: salary for player, salary in zip(df["name"], df["salary"])}
-
     found_trades = False
     email_contents = ["No trades required."]
 
-    prev_team_salary_range = 1e9
-
     for _ in range(10):
         team_salaries = df.groupby("team").sum()["salary"]
-        team_salary_range = team_salaries.max() - team_salaries.min()
-
-        if team_salary_range > prev_team_salary_range:
-            raise ValueError(
-                "Unable to find trades. Consider increasing the relative difference."
-            )
-
-        prev_team_salary_range = team_salary_range
-
         mean_team_salary = team_salaries.mean()
 
         salary_floor = mean_team_salary * (1 - relative_difference)
@@ -62,7 +49,7 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
             break
 
         (player_name_i, team_i), (player_name_j, team_j) = find_best_trade(
-            df, team_salaries, salary_map, trade_rules
+            df, trade_rules
         )
         email_contents.append(
             f"- {player_name_i} (team {team_i}) for {player_name_j} (team {team_j})"
@@ -110,58 +97,49 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
         print("\nSent email successfully.")
 
 
-def find_best_trade(
-    df: pd.DataFrame,
-    team_salaries: pd.Series,
-    salary_map: dict[str, int],
-    trade_rules: bool,
-):
-    team_number_i = int(team_salaries.idxmax())
-    team_number_j = int(team_salaries.idxmin())
+def find_best_trade(df: pd.DataFrame, trade_rules: bool):
+    n_teams = df.team.max()
 
-    player_indices_i = df[df["team"] == team_number_i]["name"].index
-    player_indices_j = df[df["team"] == team_number_j]["name"].index
-
-    min_team_salary_difference = 1e9
+    min_cost = math.inf
     best_trade = None
 
-    for player_index_i in player_indices_i:
-        row_i = df.loc[player_index_i]
+    for i in range(n_teams - 1):
+        team_number_i = i + 1
+        player_indices_i = df[df["team"] == team_number_i].index
 
-        if trade_rules and (row_i.traded_last_time or row_i.trade_count > 3):
-            continue
+        for j in range(i + 1, n_teams):
+            team_number_j = j + 1
+            player_indices_j = df[df["team"] == team_number_j].index
 
-        for player_index_j in player_indices_j:
-            row_j = df.loc[player_index_j]
+            for player_index_i in player_indices_i:
+                row_i = df.loc[player_index_i]
 
-            if trade_rules and (row_j.traded_last_time or row_i.trade_count > 3):
-                continue
+                if trade_rules and (row_i.traded_last_time or row_i.trade_count > 3):
+                    continue
 
-            new_player_indices_i = (set(player_indices_i) - {player_index_i}) | {
-                player_index_j
-            }
-            new_player_indices_j = (set(player_indices_j) - {player_index_j}) | {
-                player_index_i
-            }
+                for player_index_j in player_indices_j:
+                    row_j = df.loc[player_index_j]
 
-            new_player_names_i = df["name"].loc[list(new_player_indices_i)]
-            new_player_names_j = df["name"].loc[list(new_player_indices_j)]
+                    if trade_rules and (
+                        row_j.traded_last_time or row_i.trade_count > 3
+                    ):
+                        continue
 
-            new_team_salary_i = get_team_salary(new_player_names_i, salary_map)
-            new_team_salary_j = get_team_salary(new_player_names_j, salary_map)
+                    df_copy = df.copy(deep=True)
+                    df_copy.loc[player_index_i, "team"] = team_number_j
+                    df_copy.loc[player_index_j, "team"] = team_number_i
 
-            new_team_salary_difference = abs(new_team_salary_i - new_team_salary_j)
+                    sums_by_team = df_copy.groupby("team").sum()
+                    cost_salary = sums_by_team["salary"].var() / df_copy["salary"].var()
+                    cost = cost_salary
 
-            if np.isnan(new_team_salary_difference):
-                raise ValueError("Encountered a NaN team salary difference.")
+                    if cost < min_cost:
+                        min_cost = cost
 
-            if new_team_salary_difference < min_team_salary_difference:
-                min_team_salary_difference = new_team_salary_difference
-
-                best_trade = (
-                    (row_i["name"], team_number_i),
-                    (row_j["name"], team_number_j),
-                )
+                        best_trade = (
+                            (row_i["name"], team_number_i),
+                            (row_j["name"], team_number_j),
+                        )
 
     return best_trade
 
