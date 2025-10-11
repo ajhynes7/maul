@@ -28,6 +28,7 @@ if __name__ == "__main__":
                 team=row["team"],
                 games_attended=row["Games Attended"],
                 goals=row["Goals"],
+                assists=row["Assists"],
             )
 
             if trade_count := trade_counts.get(player.name):

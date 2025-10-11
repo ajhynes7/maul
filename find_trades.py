@@ -21,6 +21,14 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
     if (df["salary"] <= 0).any():
         raise ValueError("All salaries should be positive.")
 
+    df["attendance_factor"] = df["games_attended"] / df["games_attended"].max()
+
+    df["goals_per_game"] = df["goals"] / df["games_attended"]
+    df["assists_per_game"] = df["assists"] / df["games_attended"]
+
+    df["expected_goals_per_game"] = df["goals_per_game"] * df["attendance_factor"]
+    df["expected_assists_per_game"] = df["assists_per_game"] * df["attendance_factor"]
+
     found_trades = False
     email_contents = ["No trades required."]
 
@@ -131,7 +139,15 @@ def find_best_trade(df: pd.DataFrame, trade_rules: bool):
 
                     sums_by_team = df_copy.groupby("team").sum()
                     cost_salary = sums_by_team["salary"].var() / df_copy["salary"].var()
-                    cost = cost_salary
+                    cost_goals = (
+                        sums_by_team["expected_goals_per_game"].var()
+                        / df_copy["goals"].var()
+                    )
+                    cost_assists = (
+                        sums_by_team["expected_assists_per_game"].var()
+                        / df_copy["assists"].var()
+                    )
+                    cost = cost_salary + cost_goals + cost_assists
 
                     if cost < min_cost:
                         min_cost = cost
@@ -142,10 +158,6 @@ def find_best_trade(df: pd.DataFrame, trade_rules: bool):
                         )
 
     return best_trade
-
-
-def get_team_salary(team: list[str], salary_map: dict[str, int]) -> int:
-    return sum(salary_map[player] for player in team)
 
 
 if __name__ == "__main__":
