@@ -33,7 +33,8 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
     email_contents = ["No trades required."]
 
     for _ in range(10):
-        team_salaries = df.groupby("team").sum()["salary"]
+        team_sums = df.groupby("team").sum()
+        team_salaries = team_sums["salary"]
         mean_team_salary = team_salaries.mean()
 
         salary_floor = mean_team_salary * (1 - relative_difference)
@@ -50,8 +51,17 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
             email_contents.append(f"Salary cap: ${salary_cap.round():,.0f}")
 
             email_contents.append(
-                "\nTeam salaries: "
-                + ", ".join([f"${x:,.0f}" for x in team_salaries.values])
+                "\nTeam salaries: " + ", ".join([f"${x:,.0f}" for x in team_salaries])
+            )
+            email_contents.append(
+                "\nExpected team goals: "
+                + ", ".join([f"{x:.0f}" for x in team_sums["expected_goals_per_game"]])
+            )
+            email_contents.append(
+                "\nExpected team assists: "
+                + ", ".join(
+                    [f"{x:.0f}" for x in team_sums["expected_assists_per_game"]]
+                )
             )
 
             break
