@@ -9,7 +9,9 @@ from models.player import Player
 from sqlmodel import Session, select, create_engine
 
 
-def main(relative_difference: float, trade_rules: bool, send_email: bool) -> None:
+def main(
+    relative_difference: float, trade_rules: bool, include_stats: bool, send_email: bool
+) -> None:
     engine = create_engine("sqlite:///maul.db")
 
     with Session(engine) as session:
@@ -54,7 +56,9 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
 
             break
 
-        best_trade, min_cost = find_best_trade(df, trade_rules, min_cost=min_cost)
+        best_trade, min_cost = find_best_trade(
+            df, trade_rules=trade_rules, include_stats=include_stats, min_cost=min_cost
+        )
 
         try:
             (player_name_i, team_i), (player_name_j, team_j) = best_trade
@@ -120,15 +124,22 @@ def main(relative_difference: float, trade_rules: bool, send_email: bool) -> Non
         print("\nSent email successfully.")
 
 
-def find_best_trade(df: pd.DataFrame, trade_rules: bool, min_cost: float = None):
+def find_best_trade(
+    df: pd.DataFrame,
+    trade_rules: bool = False,
+    include_stats: bool = False,
+    min_cost: float = None,
+):
     n_teams = df.team.max()
 
     min_cost = min_cost or math.inf
     best_trade = None
 
     salary_var = df["salary"].var()
-    goals_var = df["expected_goals_per_game"].var()
-    assists_var = df["expected_assists_per_game"].var()
+
+    if include_stats:
+        goals_var = df["expected_goals_per_game"].var()
+        assists_var = df["expected_assists_per_game"].var()
 
     for i in range(n_teams - 1):
         team_number_i = i + 1
@@ -157,14 +168,17 @@ def find_best_trade(df: pd.DataFrame, trade_rules: bool, min_cost: float = None)
                     df_copy.at[player_index_j, "team"] = team_number_i
 
                     sums_by_team = df_copy.groupby("team").sum()
-                    cost_salary = sums_by_team["salary"].var() / salary_var
-                    cost_goals = (
-                        sums_by_team["expected_goals_per_game"].var() / goals_var
-                    )
-                    cost_assists = (
-                        sums_by_team["expected_assists_per_game"].var() / assists_var
-                    )
-                    cost = cost_salary + cost_goals + cost_assists
+                    cost = sums_by_team["salary"].var() / salary_var
+
+                    if include_stats:
+                        cost_goals = (
+                            sums_by_team["expected_goals_per_game"].var() / goals_var
+                        )
+                        cost_assists = (
+                            sums_by_team["expected_assists_per_game"].var()
+                            / assists_var
+                        )
+                        cost = cost + cost_goals + cost_assists
 
                     if cost < min_cost:
                         min_cost = cost
@@ -182,8 +196,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--rel-diff", type=float, default=0.0035)
     parser.add_argument("--trade-rules", action="store_true")
+    parser.add_argument("--include-stats", action="store_true")
     parser.add_argument("--send-email", action="store_true")
 
     args = parser.parse_args()
 
-    main(args.rel_diff, args.trade_rules, args.send_email)
+    main(args.rel_diff, args.trade_rules, args.include_stats, args.send_email)
