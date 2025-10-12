@@ -139,13 +139,13 @@ def find_best_trade(
     best_trade = None
 
     salaries = df["salary"].values
-    goals = df["goals"].values
-    assists = df["assists"].values
+    goals = df["expected_goals_per_game"].values
+    assists = df["expected_assists_per_game"].values
 
     team_sums = df.groupby("team").sum()
     team_salaries = team_sums["salary"].values
-    team_goals = team_sums["goals"].values
-    team_assists = team_sums["assists"].values
+    team_goals = team_sums["expected_goals_per_game"].values
+    team_assists = team_sums["expected_assists_per_game"].values
 
     salary_var = df["salary"].var()
 
@@ -178,12 +178,12 @@ def find_best_trade(
                     new_team_salaries = team_salaries.copy()
 
                     new_team_salaries[team_index_i] = (
-                        team_salaries[team_index_i]
+                        new_team_salaries[team_index_i]
                         - salaries[player_index_i]
                         + salaries[player_index_j]
                     )
                     new_team_salaries[team_index_j] = (
-                        team_salaries[team_index_j]
+                        new_team_salaries[team_index_j]
                         - salaries[player_index_j]
                         + salaries[player_index_i]
                     )
@@ -195,13 +195,13 @@ def find_best_trade(
                         new_team_assists = team_assists.copy()
 
                         new_team_goals[team_index_i] = (
-                            team_goals[team_index_i]
+                            new_team_goals[team_index_i]
                             - goals[player_index_i]
                             + goals[player_index_j]
                         )
 
                         new_team_assists[team_index_i] = (
-                            team_assists[team_index_i]
+                            new_team_assists[team_index_i]
                             - assists[player_index_i]
                             + assists[player_index_j]
                         )
@@ -212,6 +212,7 @@ def find_best_trade(
                         cost = cost + cost_goals + cost_assists
 
                     if cost < min_cost:
+                        print(new_team_assists, cost)
                         min_cost = cost
 
                         best_trade = (
