@@ -51,13 +51,13 @@ def main(
         if not teams_under_floor.any() and not teams_over_cap.any():
             email_contents.append("\nAll team salaries are between the floor and cap.")
 
-            email_contents.append(f"Salary floor: ${salary_floor.round():,.0f}")
-            email_contents.append(f"Salary cap: ${salary_cap.round():,.0f}")
-
             break
 
         best_trade, min_cost = find_best_trade(
-            df, trade_rules=trade_rules, include_stats=include_stats, min_cost=min_cost
+            df,
+            trade_rules=trade_rules,
+            include_stats=include_stats,
+            min_cost=min_cost,
         )
 
         try:
@@ -93,6 +93,9 @@ def main(
     if found_trades:
         email_contents[0] = "Found trades:\n"
 
+    email_contents.append(f"\nSalary floor: ${salary_floor.round():,.0f}")
+    email_contents.append(f"Salary cap: ${salary_cap.round():,.0f}")
+
     email_contents.append(
         "\nTeam salaries: " + ", ".join([f"${x:,.0f}" for x in team_salaries])
     )
@@ -101,7 +104,7 @@ def main(
         + ", ".join([f"{x:.0f}" for x in team_sums["expected_goals_per_game"]])
     )
     email_contents.append(
-        "\nExpected team assists: "
+        "Expected team assists: "
         + ", ".join([f"{x:.0f}" for x in team_sums["expected_assists_per_game"]])
     )
 
@@ -135,18 +138,27 @@ def find_best_trade(
     min_cost = min_cost or math.inf
     best_trade = None
 
+    salaries = df["salary"].values
+    goals = df["goals"].values
+    assists = df["assists"].values
+
+    team_sums = df.groupby("team").sum()
+    team_salaries = team_sums["salary"].values
+    team_goals = team_sums["goals"].values
+    team_assists = team_sums["assists"].values
+
     salary_var = df["salary"].var()
 
     if include_stats:
         goals_var = df["expected_goals_per_game"].var()
         assists_var = df["expected_assists_per_game"].var()
 
-    for i in range(n_teams - 1):
-        team_number_i = i + 1
+    for team_index_i in range(n_teams - 1):
+        team_number_i = team_index_i + 1
         player_indices_i = df[df["team"] == team_number_i].index
 
-        for j in range(i + 1, n_teams):
-            team_number_j = j + 1
+        for team_index_j in range(team_index_i + 1, n_teams):
+            team_number_j = team_index_j + 1
             player_indices_j = df[df["team"] == team_number_j].index
 
             for player_index_i in player_indices_i:
@@ -163,21 +175,40 @@ def find_best_trade(
                     ):
                         continue
 
-                    df_copy = df.copy(deep=True)
-                    df_copy.at[player_index_i, "team"] = team_number_j
-                    df_copy.at[player_index_j, "team"] = team_number_i
+                    new_team_salaries = team_salaries.copy()
 
-                    sums_by_team = df_copy.groupby("team").sum()
-                    cost = sums_by_team["salary"].var() / salary_var
+                    new_team_salaries[team_index_i] = (
+                        team_salaries[team_index_i]
+                        - salaries[player_index_i]
+                        + salaries[player_index_j]
+                    )
+                    new_team_salaries[team_index_j] = (
+                        team_salaries[team_index_j]
+                        - salaries[player_index_j]
+                        + salaries[player_index_i]
+                    )
+
+                    cost = new_team_salaries.var() / salary_var
 
                     if include_stats:
-                        cost_goals = (
-                            sums_by_team["expected_goals_per_game"].var() / goals_var
+                        new_team_goals = team_goals.copy()
+                        new_team_assists = team_assists.copy()
+
+                        new_team_goals[team_index_i] = (
+                            team_goals[team_index_i]
+                            - goals[player_index_i]
+                            + goals[player_index_j]
                         )
-                        cost_assists = (
-                            sums_by_team["expected_assists_per_game"].var()
-                            / assists_var
+
+                        new_team_assists[team_index_i] = (
+                            team_assists[team_index_i]
+                            - assists[player_index_i]
+                            + assists[player_index_j]
                         )
+
+                        cost_goals = new_team_goals.var() / goals_var
+                        cost_assists = new_team_assists.var() / assists_var
+
                         cost = cost + cost_goals + cost_assists
 
                     if cost < min_cost:
