@@ -12,7 +12,6 @@ from sqlmodel import Session, select, create_engine
 def main(
     relative_difference: float, trade_rules: bool, include_stats: bool, send_email: bool
 ) -> None:
-    include_stats = True
     engine = create_engine("sqlite:///maul.db")
 
     with Session(engine) as session:
