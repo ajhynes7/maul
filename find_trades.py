@@ -12,6 +12,7 @@ from sqlmodel import Session, select, create_engine
 def main(
     relative_difference: float, trade_rules: bool, include_stats: bool, send_email: bool
 ) -> None:
+    include_stats = True
     engine = create_engine("sqlite:///maul.db")
 
     with Session(engine) as session:
@@ -61,34 +62,35 @@ def main(
         )
 
         try:
-            (player_name_i, team_i), (player_name_j, team_j) = best_trade
+            player_index_i, player_index_j = best_trade
         except TypeError:
             email_contents.append("\nNo better trade could be found.")
             break
 
-        email_contents.append(
-            f"- {player_name_i} (team {team_i}) for {player_name_j} (team {team_j})"
-        )
-        found_trades = True
-
-        index_i = df[df["name"] == player_name_i].index.item()
-        index_j = df[df["name"] == player_name_j].index.item()
-
-        if index_i == index_j:
+        if player_index_i == player_index_j:
             raise ValueError("The player indices must be different.")
 
-        team_number_i = df.at[index_i, "team"]
-        team_number_j = df.at[index_j, "team"]
+        team_number_i = df.at[player_index_i, "team"]
+        team_number_j = df.at[player_index_j, "team"]
+
+        player_name_i = df.at[player_index_i, "name"]
+        player_name_j = df.at[player_index_j, "name"]
 
         if team_number_i == team_number_j:
             raise ValueError("The team numbers must be different.")
 
-        df.at[index_i, "team"] = team_number_j
-        df.at[index_j, "team"] = team_number_i
+        email_contents.append(
+            f"- {player_name_i} (team {team_number_i}) for {player_name_j} (team {team_number_j})"
+        )
+        found_trades = True
+
+        # Trade players
+        df.at[player_index_i, "team"] = team_number_j
+        df.at[player_index_j, "team"] = team_number_i
 
         # Avoid trading the same player again.
-        df.at[index_i, "traded_last_time"] = True
-        df.at[index_j, "traded_last_time"] = True
+        df.at[player_index_i, "traded_last_time"] = True
+        df.at[player_index_j, "traded_last_time"] = True
 
     if found_trades:
         email_contents[0] = "Found trades:\n"
@@ -96,8 +98,9 @@ def main(
     email_contents.append(f"\nSalary floor: ${salary_floor.round():,.0f}")
     email_contents.append(f"Salary cap: ${salary_cap.round():,.0f}")
 
+    team_sums = df.groupby("team").sum()
     email_contents.append(
-        "\nTeam salaries: " + ", ".join([f"${x:,.0f}" for x in team_salaries])
+        "\nTeam salaries: " + ", ".join([f"${x:,.0f}" for x in team_sums["salary"]])
     )
     email_contents.append(
         "\nExpected team goals: "
@@ -132,7 +135,7 @@ def find_best_trade(
     trade_rules: bool = False,
     include_stats: bool = False,
     min_cost: float = None,
-):
+) -> tuple[tuple, float]:
     n_teams = df.team.max()
 
     min_cost = min_cost or math.inf
@@ -199,11 +202,21 @@ def find_best_trade(
                             - goals[player_index_i]
                             + goals[player_index_j]
                         )
+                        new_team_goals[team_index_j] = (
+                            new_team_goals[team_index_j]
+                            - goals[player_index_j]
+                            + goals[player_index_i]
+                        )
 
                         new_team_assists[team_index_i] = (
                             new_team_assists[team_index_i]
                             - assists[player_index_i]
                             + assists[player_index_j]
+                        )
+                        new_team_assists[team_index_j] = (
+                            new_team_assists[team_index_j]
+                            - assists[player_index_j]
+                            + assists[player_index_i]
                         )
 
                         cost_goals = new_team_goals.var() / goals_var
@@ -212,13 +225,9 @@ def find_best_trade(
                         cost = cost + cost_goals + cost_assists
 
                     if cost < min_cost:
-                        print(new_team_assists, cost)
                         min_cost = cost
 
-                        best_trade = (
-                            (row_i["name"], team_number_i),
-                            (row_j["name"], team_number_j),
-                        )
+                        best_trade = (player_index_i, player_index_j)
 
     return best_trade, min_cost
 
