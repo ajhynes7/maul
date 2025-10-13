@@ -60,11 +60,11 @@ def main(
             min_cost=min_cost,
         )
 
-        try:
-            player_index_i, player_index_j = best_trade
-        except TypeError:
+        if best_trade is None:
             email_contents.append("\nNo better trade could be found.")
             break
+
+        player_index_i, player_index_j = best_trade
 
         if player_index_i == player_index_j:
             raise ValueError("The player indices must be different.")
@@ -133,12 +133,12 @@ def find_best_trade(
     df: pd.DataFrame,
     trade_rules: bool = False,
     include_stats: bool = False,
-    min_cost: float = None,
-) -> tuple[tuple, float]:
+    min_cost: float | None = None,
+) -> tuple[tuple | None, float]:
     n_teams = df.team.max()
 
     min_cost = min_cost or math.inf
-    best_trade = None
+    best_trade = ()
 
     players_by_team = {
         t: df.index[df["team"] == t].values for t in range(1, n_teams + 1)
