@@ -46,10 +46,10 @@ class SheetReader:
 
             traded_player_names = []
 
-            for row in df_trades.itertuples():
-                if row.player_1:
-                    traded_player_names.append(row.player_1)
-                    traded_player_names.append(row.player_2)
+            for _, row in df_trades.iterrows():
+                if row["player_1"]:
+                    traded_player_names.append(row["player_1"])
+                    traded_player_names.append(row["player_2"])
 
             previously_traded = set()
 
