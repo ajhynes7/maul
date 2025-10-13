@@ -140,9 +140,16 @@ def find_best_trade(
     min_cost = min_cost or math.inf
     best_trade = None
 
+    players_by_team = {
+        t: df.index[df["team"] == t].values for t in range(1, n_teams + 1)
+    }
+
     salaries = df["salary"].values
     goals = df["expected_goals_per_game"].values
     assists = df["expected_assists_per_game"].values
+
+    traded_last_time = df["traded_last_time"].values
+    trade_counts = df["trade_count"].values
 
     team_sums = df.groupby("team").sum()
     team_salaries = team_sums["salary"].values
@@ -157,23 +164,22 @@ def find_best_trade(
 
     for team_index_i in range(n_teams - 1):
         team_number_i = team_index_i + 1
-        player_indices_i = df[df["team"] == team_number_i].index
+        player_indices_i = players_by_team[team_number_i]
 
         for team_index_j in range(team_index_i + 1, n_teams):
             team_number_j = team_index_j + 1
-            player_indices_j = df[df["team"] == team_number_j].index
+            player_indices_j = players_by_team[team_number_j]
 
             for player_index_i in player_indices_i:
-                row_i = df.loc[player_index_i]
-
-                if trade_rules and (row_i.traded_last_time or row_i.trade_count > 3):
+                if trade_rules and (
+                    traded_last_time[player_index_i] or trade_counts[player_index_i] > 3
+                ):
                     continue
 
                 for player_index_j in player_indices_j:
-                    row_j = df.loc[player_index_j]
-
                     if trade_rules and (
-                        row_j.traded_last_time or row_j.trade_count > 3
+                        traded_last_time[player_index_j]
+                        or trade_counts[player_index_j] > 3
                     ):
                         continue
 
