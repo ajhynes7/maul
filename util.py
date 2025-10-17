@@ -43,6 +43,7 @@ class SheetReader:
                 self.sheet.worksheet("Trade List").get("B3:F100"),
                 columns=["week", "team_1", "player_1", "team_2", "player_2"],
             )
+            df_trades = df_trades.dropna()
 
             traded_player_names = []
 
@@ -51,17 +52,21 @@ class SheetReader:
                     traded_player_names.append(row["player_1"])
                     traded_player_names.append(row["player_2"])
 
-            previously_traded = set()
+            traded_last_time = set()
 
             last_week = df_trades["week"].max()
 
             for row in df_trades[df_trades["week"] == last_week].itertuples():
-                previously_traded.add(row.player_1)
-                previously_traded.add(row.player_2)
+                traded_last_time.add(row.player_1)
+                traded_last_time.add(row.player_2)
 
             trade_counts = Counter(traded_player_names)
 
-            return trade_counts, previously_traded
+            print(f"Previous week: {last_week}")
+            print(f"Trade counts: {dict(trade_counts)}")
+            print(f"Traded last time: {traded_last_time}")
+
+            return trade_counts, traded_last_time
 
         except ValueError:
             return dict(), set()
