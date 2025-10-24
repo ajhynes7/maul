@@ -23,13 +23,8 @@ def main(
     if (df["salary"] <= 0).any():
         raise ValueError("All salaries should be positive.")
 
-    df["attendance_factor"] = df["games_attended"] / df["games_attended"].max()
-
     df["goals_per_game"] = df["goals"] / df["games_attended"]
     df["assists_per_game"] = df["assists"] / df["games_attended"]
-
-    df["expected_goals_per_game"] = df["goals_per_game"] * df["attendance_factor"]
-    df["expected_assists_per_game"] = df["assists_per_game"] * df["attendance_factor"]
 
     found_trades = False
     email_contents = ["No trades required."]
@@ -103,11 +98,11 @@ def main(
     )
     email_contents.append(
         "\nExpected team goals: "
-        + ", ".join([f"{x:.0f}" for x in team_sums["expected_goals_per_game"]])
+        + ", ".join([f"{x:.0f}" for x in team_sums["goals_per_game"]])
     )
     email_contents.append(
         "Expected team assists: "
-        + ", ".join([f"{x:.0f}" for x in team_sums["expected_assists_per_game"]])
+        + ", ".join([f"{x:.0f}" for x in team_sums["assists_per_game"]])
     )
 
     print("\n".join(email_contents))
@@ -145,22 +140,22 @@ def find_best_trade(
     }
 
     salaries = df["salary"].values
-    goals = df["expected_goals_per_game"].values
-    assists = df["expected_assists_per_game"].values
+    goals = df["goals_per_game"].values
+    assists = df["assists_per_game"].values
 
     traded_last_time = df["traded_last_time"].values
     trade_counts = df["trade_count"].values
 
     team_sums = df.groupby("team").sum()
     team_salaries = team_sums["salary"].values
-    team_goals = team_sums["expected_goals_per_game"].values
-    team_assists = team_sums["expected_assists_per_game"].values
+    team_goals = team_sums["goals_per_game"].values
+    team_assists = team_sums["assists_per_game"].values
 
     salary_var = df["salary"].var()
 
     if include_stats:
-        goals_var = df["expected_goals_per_game"].var()
-        assists_var = df["expected_assists_per_game"].var()
+        goals_var = df["goals_per_game"].var()
+        assists_var = df["assists_per_game"].var()
 
     for team_index_i in range(n_teams - 1):
         team_number_i = team_index_i + 1
