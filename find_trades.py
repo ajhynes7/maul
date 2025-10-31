@@ -27,7 +27,6 @@ def main(
     df["assists_per_game"] = df["assists"] / df["games_attended"]
 
     found_trades = False
-    email_contents = ["No trades required."]
 
     team_sums = df.groupby("team").sum()
     team_salaries = team_sums["salary"]
@@ -38,20 +37,21 @@ def main(
     rel_diff = percentage / 100
     salary_floor = mean_team_salary * (1 - rel_diff)
     salary_cap = mean_team_salary * (1 + rel_diff)
+    target_salary_range = salary_cap - salary_floor
+
+    salary_range = team_salaries.max() - team_salaries.min()
+    prev_salary_range = salary_range
+    email_contents = [
+        f"Initial team salary range: ${salary_range:,.0f}",
+        f"Target team salary range: ${target_salary_range:,.0f}\n",
+        None,
+    ]
 
     min_cost = math.inf
-    prev_salary_range = math.inf
 
     for _ in range(10):
         team_sums = df.groupby("team").sum()
         team_salaries = team_sums["salary"]
-
-        salary_range = team_salaries.max() - team_salaries.min()
-
-        if salary_range >= prev_salary_range:
-            raise ValueError(
-                f"Salary range did not decrease. Previous: {prev_salary_range}, New: {salary_range}"
-            )
 
         teams_under_floor = team_numbers[team_salaries < salary_floor]
         teams_over_cap = team_numbers[team_salaries > salary_cap]
@@ -86,11 +86,6 @@ def main(
         if team_number_i == team_number_j:
             raise ValueError("The team numbers must be different.")
 
-        email_contents.append(
-            f"- {player_name_i} (team {team_number_i}) for {player_name_j} (team {team_number_j})"
-        )
-        found_trades = True
-
         # Trade players
         df.at[player_index_i, "team"] = team_number_j
         df.at[player_index_j, "team"] = team_number_i
@@ -99,8 +94,25 @@ def main(
         df.at[player_index_i, "traded_last_time"] = True
         df.at[player_index_j, "traded_last_time"] = True
 
-    if found_trades:
-        email_contents[0] = "Found trades:\n"
+        team_sums = df.groupby("team").sum()
+        team_salaries = team_sums["salary"]
+
+        salary_range = team_salaries.max() - team_salaries.min()
+
+        if salary_range >= prev_salary_range:
+            raise ValueError(
+                f"Salary range did not decrease. Previous: {prev_salary_range}, New: {salary_range}"
+            )
+
+        prev_salary_range = salary_range
+        found_trades = True
+
+        email_contents.append(
+            f"- {player_name_i} (team {team_number_i}) for {player_name_j} (team {team_number_j})"
+        )
+        email_contents.append(f"\t- Team salary range: ${salary_range:,.0f}")
+
+    email_contents[2] = "Found trades:\n" if found_trades else "No trades found.\n"
 
     email_contents.append(f"\nSalary floor: ${salary_floor.round():,.0f}")
     email_contents.append(f"Salary cap: ${salary_cap.round():,.0f}")
