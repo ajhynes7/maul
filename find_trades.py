@@ -10,7 +10,7 @@ from sqlmodel import Session, select, create_engine
 
 
 def main(
-    relative_difference: float, trade_rules: bool, include_stats: bool, send_email: bool
+    percentage: float, trade_rules: bool, include_stats: bool, send_email: bool
 ) -> None:
     engine = create_engine("sqlite:///maul.db")
 
@@ -29,17 +29,30 @@ def main(
     found_trades = False
     email_contents = ["No trades required."]
 
+    team_sums = df.groupby("team").sum()
+    team_salaries = team_sums["salary"]
+
+    team_numbers = team_salaries.index
+    mean_team_salary = team_salaries.mean()
+
+    rel_diff = percentage / 100
+    salary_floor = mean_team_salary * (1 - rel_diff)
+    salary_cap = mean_team_salary * (1 + rel_diff)
+
     min_cost = math.inf
+    prev_salary_range = math.inf
 
     for _ in range(10):
         team_sums = df.groupby("team").sum()
         team_salaries = team_sums["salary"]
-        mean_team_salary = team_salaries.mean()
 
-        salary_floor = mean_team_salary * (1 - relative_difference)
-        salary_cap = mean_team_salary * (1 + relative_difference)
+        salary_range = team_salaries.max() - team_salaries.min()
 
-        team_numbers = team_salaries.index
+        if salary_range >= prev_salary_range:
+            raise ValueError(
+                f"Salary range did not decrease. Previous: {prev_salary_range}, New: {salary_range}"
+            )
+
         teams_under_floor = team_numbers[team_salaries < salary_floor]
         teams_over_cap = team_numbers[team_salaries > salary_cap]
 
@@ -55,7 +68,7 @@ def main(
             min_cost=min_cost,
         )
 
-        if best_trade is None:
+        if not best_trade:
             email_contents.append("\nNo better trade could be found.")
             break
 
@@ -235,11 +248,11 @@ def find_best_trade(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--rel-diff", type=float, default=0.0035)
+    parser.add_argument("--percentage", type=float, default=0.35)
     parser.add_argument("--trade-rules", action="store_true")
     parser.add_argument("--include-stats", action="store_true")
     parser.add_argument("--send-email", action="store_true")
 
     args = parser.parse_args()
 
-    main(args.rel_diff, args.trade_rules, args.include_stats, args.send_email)
+    main(args.percentage, args.trade_rules, args.include_stats, args.send_email)
