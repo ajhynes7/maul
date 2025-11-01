@@ -1,6 +1,6 @@
-import os
-import math
 import argparse
+import math
+import os
 
 import pandas as pd
 import yagmail
@@ -37,13 +37,11 @@ def main(
     rel_diff = percentage / 100
     salary_floor = mean_team_salary * (1 - rel_diff)
     salary_cap = mean_team_salary * (1 + rel_diff)
-    target_salary_range = salary_cap - salary_floor
 
     salary_range = team_salaries.max() - team_salaries.min()
     prev_salary_range = salary_range
     email_contents = [
-        f"Initial team salary range: ${salary_range:,.0f}",
-        f"Target team salary range: ${target_salary_range:,.0f}\n",
+        f"Initial team salary range: ${salary_range:,.0f}\n",
         None,
     ]
 
@@ -110,9 +108,9 @@ def main(
         email_contents.append(
             f"- {player_name_i} (team {team_number_i}) for {player_name_j} (team {team_number_j})"
         )
-        email_contents.append(f"\t- Team salary range: ${salary_range:,.0f}")
+        email_contents.append(f"\t- New team salary range: ${salary_range:,.0f}")
 
-    email_contents[2] = "Found trades:\n" if found_trades else "No trades found.\n"
+    email_contents[1] = "Found trades:\n" if found_trades else "No trades found.\n"
 
     email_contents.append(f"\nSalary floor: ${salary_floor.round():,.0f}")
     email_contents.append(f"Salary cap: ${salary_cap.round():,.0f}")
