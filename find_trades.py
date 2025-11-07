@@ -2,6 +2,7 @@ import argparse
 import math
 import os
 
+import numpy as np
 import pandas as pd
 import yagmail
 
@@ -180,11 +181,11 @@ def find_best_trade(
         goals_var = df["goals_per_game"].var()
         assists_var = df["assists_per_game"].var()
 
-    for team_index_i in range(n_teams - 1):
+    for team_index_i in [np.argmax(team_salaries)]:
         team_number_i = team_index_i + 1
         player_indices_i = players_by_team[team_number_i]
 
-        for team_index_j in range(team_index_i + 1, n_teams):
+        for team_index_j in [np.argmin(team_salaries)]:
             team_number_j = team_index_j + 1
             player_indices_j = players_by_team[team_number_j]
 
