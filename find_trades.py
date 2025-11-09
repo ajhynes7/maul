@@ -5,9 +5,9 @@ import os
 import numpy as np
 import pandas as pd
 import yagmail
+from sqlmodel import Session, create_engine, select
 
 from models.player import Player
-from sqlmodel import Session, select, create_engine
 
 
 def main(

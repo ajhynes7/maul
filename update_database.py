@@ -1,8 +1,7 @@
-from sqlmodel import SQLModel, Session, create_engine, text
+from sqlmodel import Session, SQLModel, create_engine, text
 
-from util import SheetReader
 from models.player import Player
-
+from util import SheetReader
 
 if __name__ == "__main__":
     db_filename = "maul.db"
