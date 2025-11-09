@@ -181,77 +181,74 @@ def find_best_trade(
         goals_var = df["goals_per_game"].var()
         assists_var = df["assists_per_game"].var()
 
-    for team_index_i in [np.argmax(team_salaries)]:
-        team_number_i = team_index_i + 1
-        player_indices_i = players_by_team[team_number_i]
+    team_index_i = np.argmax(team_salaries)
+    team_index_j = np.argmin(team_salaries)
 
-        for team_index_j in [np.argmin(team_salaries)]:
-            team_number_j = team_index_j + 1
-            player_indices_j = players_by_team[team_number_j]
+    player_indices_i = players_by_team[team_index_i + 1]
+    player_indices_j = players_by_team[team_index_j + 1]
 
-            for player_index_i in player_indices_i:
-                if trade_rules and (
-                    traded_last_time[player_index_i] or trade_counts[player_index_i] > 3
-                ):
-                    continue
+    for player_index_i in player_indices_i:
+        if trade_rules and (
+            traded_last_time[player_index_i] or trade_counts[player_index_i] > 3
+        ):
+            continue
 
-                for player_index_j in player_indices_j:
-                    if trade_rules and (
-                        traded_last_time[player_index_j]
-                        or trade_counts[player_index_j] > 3
-                    ):
-                        continue
+        for player_index_j in player_indices_j:
+            if trade_rules and (
+                traded_last_time[player_index_j] or trade_counts[player_index_j] > 3
+            ):
+                continue
 
-                    new_team_salaries = team_salaries.copy()
+            new_team_salaries = team_salaries.copy()
 
-                    new_team_salaries[team_index_i] = (
-                        new_team_salaries[team_index_i]
-                        - salaries[player_index_i]
-                        + salaries[player_index_j]
-                    )
-                    new_team_salaries[team_index_j] = (
-                        new_team_salaries[team_index_j]
-                        - salaries[player_index_j]
-                        + salaries[player_index_i]
-                    )
+            new_team_salaries[team_index_i] = (
+                new_team_salaries[team_index_i]
+                - salaries[player_index_i]
+                + salaries[player_index_j]
+            )
+            new_team_salaries[team_index_j] = (
+                new_team_salaries[team_index_j]
+                - salaries[player_index_j]
+                + salaries[player_index_i]
+            )
 
-                    cost = new_team_salaries.var() / salary_var
+            cost = new_team_salaries.var() / salary_var
 
-                    if include_stats:
-                        new_team_goals = team_goals.copy()
-                        new_team_assists = team_assists.copy()
+            if include_stats:
+                new_team_goals = team_goals.copy()
+                new_team_assists = team_assists.copy()
 
-                        new_team_goals[team_index_i] = (
-                            new_team_goals[team_index_i]
-                            - goals[player_index_i]
-                            + goals[player_index_j]
-                        )
-                        new_team_goals[team_index_j] = (
-                            new_team_goals[team_index_j]
-                            - goals[player_index_j]
-                            + goals[player_index_i]
-                        )
+                new_team_goals[team_index_i] = (
+                    new_team_goals[team_index_i]
+                    - goals[player_index_i]
+                    + goals[player_index_j]
+                )
+                new_team_goals[team_index_j] = (
+                    new_team_goals[team_index_j]
+                    - goals[player_index_j]
+                    + goals[player_index_i]
+                )
 
-                        new_team_assists[team_index_i] = (
-                            new_team_assists[team_index_i]
-                            - assists[player_index_i]
-                            + assists[player_index_j]
-                        )
-                        new_team_assists[team_index_j] = (
-                            new_team_assists[team_index_j]
-                            - assists[player_index_j]
-                            + assists[player_index_i]
-                        )
+                new_team_assists[team_index_i] = (
+                    new_team_assists[team_index_i]
+                    - assists[player_index_i]
+                    + assists[player_index_j]
+                )
+                new_team_assists[team_index_j] = (
+                    new_team_assists[team_index_j]
+                    - assists[player_index_j]
+                    + assists[player_index_i]
+                )
 
-                        cost_goals = new_team_goals.var() / goals_var
-                        cost_assists = new_team_assists.var() / assists_var
+                cost_goals = new_team_goals.var() / goals_var
+                cost_assists = new_team_assists.var() / assists_var
 
-                        cost = cost + cost_goals + cost_assists
+                cost = cost + cost_goals + cost_assists
 
-                    if cost < min_cost:
-                        min_cost = cost
+            if cost < min_cost:
+                min_cost = cost
 
-                        best_trade = (player_index_i, player_index_j)
+                best_trade = (player_index_i, player_index_j)
 
     return best_trade, min_cost
 
