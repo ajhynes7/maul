@@ -40,7 +40,6 @@ def main(
     salary_cap = mean_team_salary * (1 + rel_diff)
 
     salary_range = team_salaries.max() - team_salaries.min()
-    prev_salary_range = salary_range
     email_contents = [
         f"Initial team salary range: ${salary_range:,.0f}\n",
         None,
@@ -97,13 +96,6 @@ def main(
         team_salaries = team_sums["salary"]
 
         salary_range = team_salaries.max() - team_salaries.min()
-
-        if salary_range >= prev_salary_range:
-            raise ValueError(
-                f"Salary range did not decrease. Previous: {prev_salary_range}, New: {salary_range}"
-            )
-
-        prev_salary_range = salary_range
         found_trades = True
 
         email_contents.append(
