@@ -45,8 +45,6 @@ def main(
         None,
     ]
 
-    min_cost = math.inf
-
     for _ in range(10):
         team_sums = df.groupby("team").sum()
         team_salaries = team_sums["salary"]
@@ -59,11 +57,10 @@ def main(
 
             break
 
-        best_trade, min_cost = find_best_trade(
+        best_trade = find_best_trade(
             df,
             trade_rules=trade_rules,
             include_stats=include_stats,
-            min_cost=min_cost,
         )
 
         if not best_trade:
@@ -144,11 +141,10 @@ def find_best_trade(
     df: pd.DataFrame,
     trade_rules: bool = False,
     include_stats: bool = False,
-    min_cost: float | None = None,
 ) -> tuple[tuple | None, float]:
     n_teams = df.team.max()
 
-    min_cost = min_cost or math.inf
+    min_cost = math.inf
     best_trade = ()
 
     players_by_team = {
@@ -242,7 +238,7 @@ def find_best_trade(
 
                 best_trade = (player_index_i, player_index_j)
 
-    return best_trade, min_cost
+    return best_trade
 
 
 if __name__ == "__main__":
