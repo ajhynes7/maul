@@ -2,7 +2,7 @@ import argparse
 import json
 import random
 from copy import deepcopy
-from itertools import chain
+from itertools import chain, combinations
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -75,7 +75,7 @@ def main(registrations_path: str):
     n_teams = 6
     teams = get_groups(player_ids, n_teams)
 
-    for _ in range(100):
+    for _ in range(1000):
         random_swap(teams)
 
         games_attended_ragged = [
@@ -120,34 +120,22 @@ def main(registrations_path: str):
         mean_second_assists_per_game = np.nanmean(second_assists_per_game, axis=1)
         mean_d_blocks_per_game = np.nanmean(d_blocks_per_game, axis=1)
 
-        target_point = Point(
-            [
-                np.nanmean(goals_per_game.flatten()),
-                np.nanmean(assists_per_game.flatten()),
-                np.nanmean(second_assists_per_game.flatten()),
-                np.nanmean(d_blocks_per_game.flatten()),
-            ]
-        )
+        points = [
+            Point(
+                [
+                    mean_goals_per_game[i],
+                    mean_assists_per_game[i],
+                    mean_second_assists_per_game[i],
+                    mean_d_blocks_per_game[i],
+                ]
+            )
+            for i in range(n_teams)
+        ]
 
-        try:
-            points = [
-                Point(
-                    [
-                        mean_goals_per_game[i],
-                        mean_assists_per_game[i],
-                        mean_second_assists_per_game[i],
-                        mean_d_blocks_per_game[i],
-                    ]
-                )
-                for i in range(n_teams)
-            ]
-        except ValueError:
-            continue
-
-        distances = [point.distance_point(target_point) for point in points]
-
-        cost = (unknown_cost, np.max(distances))
         min_costs.append(min_cost)
+
+        max_distance = max_distance_between_points(points)
+        cost = (unknown_cost, max_distance)
 
         if cost < min_cost:
             min_cost = cost
@@ -165,6 +153,18 @@ def main(registrations_path: str):
     plt.ylabel("Cost")
 
     plt.show()
+
+
+def max_distance_between_points(points: list[Point]) -> float:
+    max_distance = 0
+
+    for point_a, point_b in combinations(points, 2):
+        distance = point_a.distance_point(point_b)
+
+        if distance > max_distance:
+            max_distance = distance
+
+    return max_distance
 
 
 def get_team_stats(
