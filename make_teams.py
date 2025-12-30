@@ -78,64 +78,8 @@ def main(registrations_path: str):
     for _ in range(1000):
         random_swap(teams)
 
-        games_attended_ragged = [
-            get_team_stats(player_id_map, team, "games_attended") for team in teams
-        ]
-        unknowns = [np.isnan(x).sum() for x in games_attended_ragged]
-        unknown_cost = np.ptp(unknowns)
-
-        games_attended = np.array(pad_with_nans(games_attended_ragged))
-
-        goals = np.array(
-            pad_with_nans(
-                [get_team_stats(player_id_map, team, "goals") for team in teams]
-            )
-        )
-        assists = np.array(
-            pad_with_nans(
-                [get_team_stats(player_id_map, team, "assists") for team in teams]
-            )
-        )
-        second_assists = np.array(
-            pad_with_nans(
-                [
-                    get_team_stats(player_id_map, team, "second_assists")
-                    for team in teams
-                ]
-            )
-        )
-        d_blocks = np.array(
-            pad_with_nans(
-                [get_team_stats(player_id_map, team, "d_blocks") for team in teams]
-            )
-        )
-
-        goals_per_game = goals / games_attended
-        assists_per_game = assists / games_attended
-        second_assists_per_game = second_assists / games_attended
-        d_blocks_per_game = d_blocks / games_attended
-
-        mean_goals_per_game = np.nanmean(goals_per_game, axis=1)
-        mean_assists_per_game = np.nanmean(assists_per_game, axis=1)
-        mean_second_assists_per_game = np.nanmean(second_assists_per_game, axis=1)
-        mean_d_blocks_per_game = np.nanmean(d_blocks_per_game, axis=1)
-
-        points = [
-            Point(
-                [
-                    mean_goals_per_game[i],
-                    mean_assists_per_game[i],
-                    mean_second_assists_per_game[i],
-                    mean_d_blocks_per_game[i],
-                ]
-            )
-            for i in range(n_teams)
-        ]
-
         min_costs.append(min_cost)
-
-        max_distance = max_distance_between_points(points)
-        cost = (unknown_cost, max_distance)
+        cost = evaluate_teams(player_id_map, teams)
 
         if cost < min_cost:
             min_cost = cost
@@ -153,6 +97,64 @@ def main(registrations_path: str):
     plt.ylabel("Cost")
 
     plt.show()
+
+
+def evaluate_teams(
+    player_id_map: dict[int, Player], teams: list[list[int]]
+) -> tuple[int, float]:
+    games_attended_ragged = [
+        get_team_stats(player_id_map, team, "games_attended") for team in teams
+    ]
+    unknowns = [np.isnan(x).sum() for x in games_attended_ragged]
+    unknown_cost = np.ptp(unknowns)
+
+    games_attended = np.array(pad_with_nans(games_attended_ragged))
+
+    goals = np.array(
+        pad_with_nans([get_team_stats(player_id_map, team, "goals") for team in teams])
+    )
+    assists = np.array(
+        pad_with_nans(
+            [get_team_stats(player_id_map, team, "assists") for team in teams]
+        )
+    )
+    second_assists = np.array(
+        pad_with_nans(
+            [get_team_stats(player_id_map, team, "second_assists") for team in teams]
+        )
+    )
+    d_blocks = np.array(
+        pad_with_nans(
+            [get_team_stats(player_id_map, team, "d_blocks") for team in teams]
+        )
+    )
+
+    goals_per_game = goals / games_attended
+    assists_per_game = assists / games_attended
+    second_assists_per_game = second_assists / games_attended
+    d_blocks_per_game = d_blocks / games_attended
+
+    mean_goals_per_game = np.nanmean(goals_per_game, axis=1)
+    mean_assists_per_game = np.nanmean(assists_per_game, axis=1)
+    mean_second_assists_per_game = np.nanmean(second_assists_per_game, axis=1)
+    mean_d_blocks_per_game = np.nanmean(d_blocks_per_game, axis=1)
+
+    points = [
+        Point(
+            [
+                mean_goals_per_game[i],
+                mean_assists_per_game[i],
+                mean_second_assists_per_game[i],
+                mean_d_blocks_per_game[i],
+            ]
+        )
+        for i in range(len(teams))
+    ]
+
+    max_distance = max_distance_between_points(points)
+    cost = (unknown_cost, max_distance)
+
+    return cost
 
 
 def max_distance_between_points(points: list[Point]) -> float:
