@@ -15,3 +15,6 @@ class Player(SQLModel, table=True):
     games_attended: int = Field(default=0)
     goals: int = Field(default=0)
     assists: int = Field(default=0)
+    second_assists: int = Field(default=0)
+    completed_passes: int = Field(default=0)
+    d_blocks: int = Field(default=0)
