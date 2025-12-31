@@ -108,7 +108,7 @@ def evaluate_teams(player_id_map: dict[int, Player], teams: list[list[int]]):
     games_attended_ragged = [
         get_team_stats(player_id_map, team, "games_attended") for team in teams
     ]
-    unknowns = [np.isnan(x).sum() for x in games_attended_ragged]
+    unknowns = [(x == 0).sum() for x in games_attended_ragged]
     unknown_cost = np.ptp(unknowns)
 
     goals_per_team = mean_stats_per_team(player_id_map, teams, "goals_per_game")
