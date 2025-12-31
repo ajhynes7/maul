@@ -111,55 +111,15 @@ def evaluate_teams(player_id_map: dict[int, Player], teams: list[list[int]]):
     unknowns = [np.isnan(x).sum() for x in games_attended_ragged]
     unknown_cost = np.ptp(unknowns)
 
-    goals_per_game = np.array(
-        pad_with_nans(
-            [get_team_stats(player_id_map, team, "goals_per_game") for team in teams]
-        )
+    goals_per_team = mean_stats_per_team(player_id_map, teams, "goals_per_game")
+    assists_per_team = mean_stats_per_team(player_id_map, teams, "assists_per_game")
+    second_assists_per_team = mean_stats_per_team(
+        player_id_map, teams, "second_assists_per_game"
     )
-    assists_per_game = np.array(
-        pad_with_nans(
-            [get_team_stats(player_id_map, team, "assists_per_game") for team in teams]
-        )
+    completed_passes_per_team = mean_stats_per_team(
+        player_id_map, teams, "completed_passes_per_game"
     )
-    second_assists_per_game = np.array(
-        pad_with_nans(
-            [
-                get_team_stats(player_id_map, team, "second_assists_per_game")
-                for team in teams
-            ]
-        )
-    )
-    completed_passes_per_game = np.array(
-        pad_with_nans(
-            [
-                get_team_stats(player_id_map, team, "completed_passes_per_game")
-                for team in teams
-            ]
-        )
-    )
-    d_blocks_per_game = np.array(
-        pad_with_nans(
-            [get_team_stats(player_id_map, team, "d_blocks_per_game") for team in teams]
-        )
-    )
-
-    goals_per_team = np.nanmean(
-        scipy.stats.zscore(goals_per_game, axis=None, nan_policy="omit"), axis=1
-    )
-    assists_per_team = np.nanmean(
-        scipy.stats.zscore(assists_per_game, axis=None, nan_policy="omit"), axis=1
-    )
-    second_assists_per_team = np.nanmean(
-        scipy.stats.zscore(second_assists_per_game, axis=None, nan_policy="omit"),
-        axis=1,
-    )
-    completed_passes_per_team = np.nanmean(
-        scipy.stats.zscore(completed_passes_per_game, axis=None, nan_policy="omit"),
-        axis=1,
-    )
-    d_blocks_per_team = np.nanmean(
-        scipy.stats.zscore(d_blocks_per_game, axis=None, nan_policy="omit"), axis=1
-    )
+    d_blocks_per_team = mean_stats_per_team(player_id_map, teams, "d_blocks_per_game")
 
     points = [
         Point(
@@ -178,6 +138,18 @@ def evaluate_teams(player_id_map: dict[int, Player], teams: list[list[int]]):
     cost = (unknown_cost, max_distance)
 
     return cost
+
+
+def mean_stats_per_team(
+    player_id_map: dict, teams: list[list[int]], stat: str
+) -> np.ndarray:
+    stats_per_team = np.array(
+        pad_with_nans([get_team_stats(player_id_map, team, stat) for team in teams])
+    )
+
+    return np.nanmean(
+        scipy.stats.zscore(stats_per_team, axis=None, nan_policy="omit"), axis=1
+    )
 
 
 def max_distance_between_points(points: list[Point]) -> float:
