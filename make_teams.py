@@ -17,55 +17,13 @@ N_TEAMS = 6
 
 
 def main(registrations_path: str):
-    df = pd.read_csv(registrations_path)
-
-    df["name"] = (
-        df["first_name"].str.strip() + " " + df["last_name"].str.strip()
-    ).str.strip()
-
     engine = create_engine("sqlite:///maul.db")
 
     with Session(engine) as session:
         statement = select(Player)
         parity_players = session.exec(statement).all()
 
-    parity_player_names = [player.name for player in parity_players]
-
-    name_fixes = json.loads(Path("data/name_fixes.json").read_text())
-    extra_stats = json.loads(Path("data/extra_stats.json").read_text())
-
-    registered_player_names = df["name"]
-    registered_player_names = set(
-        registered_player_names.map(lambda x: name_fixes[x] if x in name_fixes else x)
-    )
-    registered_players = [
-        player for player in parity_players if player.name in registered_player_names
-    ]
-    non_parity_players = set(registered_player_names) - set(parity_player_names)
-
-    parity_player_ids = [p.id for p in parity_players]
-    id_ = max(parity_player_ids) + 1
-
-    for name in non_parity_players:
-        player = Player(name=name)
-        player.id = id_
-
-        player.games_attended = np.nan
-        player.goals = np.nan
-        player.assists = np.nan
-        player.second_assists = np.nan
-        player.d_blocks = np.nan
-
-        if name in extra_stats:
-            player_stats = extra_stats[name]
-
-            player.__dict__.update(player_stats)
-
-        registered_players.append(player)
-
-        id_ += 1
-
-    players = registered_players
+    players = get_registered_players(registrations_path, parity_players)
     player_id_map = {player.id: player for player in players}
     player_ids = list(player_id_map.keys())
 
@@ -73,11 +31,11 @@ def main(registrations_path: str):
     best_teams = None
     costs = []
 
-    for _ in range(5):
+    for _ in range(1):
         teams = get_groups(player_ids, N_TEAMS)
         cost = evaluate_teams(player_id_map, teams)
 
-        for _ in range(5000):
+        for _ in range(100):
             costs.append(cost)
             teams_with_swap = random_swap(teams)
             cost_with_swap = evaluate_teams(player_id_map, teams_with_swap)
@@ -98,11 +56,50 @@ def main(registrations_path: str):
 
     print(df_teams.to_markdown(index=False))
 
-    plt.plot([cost for cost in costs])
+    plt.plot([cost[1] for cost in costs])
     plt.xlabel("Iterations")
     plt.ylabel("Cost")
 
     plt.show()
+
+
+def get_registered_players(
+    registrations_path: str, parity_players: list[Player]
+) -> list[Player]:
+    parity_player_names = [player.name for player in parity_players]
+
+    df = pd.read_csv(registrations_path)
+
+    df["name"] = (
+        df["first_name"].str.strip() + " " + df["last_name"].str.strip()
+    ).str.strip()
+
+    name_fixes = json.loads(Path("data/name_fixes.json").read_text())
+    extra_stats = json.loads(Path("data/extra_stats.json").read_text())
+
+    registered_player_names = df["name"]
+    registered_player_names = set(
+        registered_player_names.map(lambda x: name_fixes[x] if x in name_fixes else x)
+    )
+    registered_players = [
+        player for player in parity_players if player.name in registered_player_names
+    ]
+    non_parity_players = set(registered_player_names) - set(parity_player_names)
+
+    parity_player_ids = [p.id for p in parity_players]
+    id_ = max(parity_player_ids) + 1
+
+    for name in non_parity_players:
+        player = Player(id=id_, name=name)
+
+        if name in extra_stats:
+            player_stats = extra_stats[name]
+            player.__dict__.update(player_stats)
+
+        registered_players.append(player)
+        id_ += 1
+
+    return registered_players
 
 
 def evaluate_teams(player_id_map: dict[int, Player], teams: list[list[int]]):
