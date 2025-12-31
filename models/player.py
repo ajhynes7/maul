@@ -36,5 +36,13 @@ class Player(SQLModel, table=True):
         )
 
     @computed_field
+    def completed_passes_per_game(self) -> float:
+        return (
+            self.completed_passes / self.games_attended
+            if self.games_attended
+            else np.nan
+        )
+
+    @computed_field
     def d_blocks_per_game(self) -> float:
         return self.d_blocks / self.games_attended if self.games_attended else np.nan

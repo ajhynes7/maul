@@ -8,6 +8,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import scipy
 from skspatial.objects import Point
 from sqlmodel import Session, create_engine, select
 
@@ -32,11 +33,11 @@ def main(registrations_path: str):
     best_teams = None
     costs = []
 
-    for _ in range(1):
+    for _ in range(5):
         teams = get_groups(player_ids, N_TEAMS)
         cost = evaluate_teams(player_id_map, teams)
 
-        for _ in range(100):
+        for _ in range(1000):
             costs.append(cost)
             teams_with_swap = random_swap(teams)
             cost_with_swap = evaluate_teams(player_id_map, teams_with_swap)
@@ -128,24 +129,46 @@ def evaluate_teams(player_id_map: dict[int, Player], teams: list[list[int]]):
             ]
         )
     )
+    completed_passes_per_game = np.array(
+        pad_with_nans(
+            [
+                get_team_stats(player_id_map, team, "completed_passes_per_game")
+                for team in teams
+            ]
+        )
+    )
     d_blocks_per_game = np.array(
         pad_with_nans(
             [get_team_stats(player_id_map, team, "d_blocks_per_game") for team in teams]
         )
     )
 
-    mean_goals_per_game = np.nanmean(goals_per_game, axis=1)
-    mean_assists_per_game = np.nanmean(assists_per_game, axis=1)
-    mean_second_assists_per_game = np.nanmean(second_assists_per_game, axis=1)
-    mean_d_blocks_per_game = np.nanmean(d_blocks_per_game, axis=1)
+    goals_per_team = np.nanmean(
+        scipy.stats.zscore(goals_per_game, axis=None, nan_policy="omit"), axis=1
+    )
+    assists_per_team = np.nanmean(
+        scipy.stats.zscore(assists_per_game, axis=None, nan_policy="omit"), axis=1
+    )
+    second_assists_per_team = np.nanmean(
+        scipy.stats.zscore(second_assists_per_game, axis=None, nan_policy="omit"),
+        axis=1,
+    )
+    completed_passes_per_team = np.nanmean(
+        scipy.stats.zscore(completed_passes_per_game, axis=None, nan_policy="omit"),
+        axis=1,
+    )
+    d_blocks_per_team = np.nanmean(
+        scipy.stats.zscore(d_blocks_per_game, axis=None, nan_policy="omit"), axis=1
+    )
 
     points = [
         Point(
             [
-                mean_goals_per_game[i],
-                mean_assists_per_game[i],
-                mean_second_assists_per_game[i],
-                mean_d_blocks_per_game[i],
+                goals_per_team[i],
+                assists_per_team[i],
+                second_assists_per_team[i],
+                completed_passes_per_team[i],
+                d_blocks_per_team[i],
             ]
         )
         for i in range(len(teams))
