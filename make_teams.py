@@ -13,6 +13,8 @@ from sqlmodel import Session, create_engine, select
 
 from models.player import Player
 
+N_TEAMS = 6
+
 
 def main(registrations_path: str):
     df = pd.read_csv(registrations_path)
@@ -69,22 +71,26 @@ def main(registrations_path: str):
 
     min_cost = (np.inf, np.inf)
     best_teams = None
+    costs = []
 
-    min_costs = []
-
-    n_teams = 6
-    teams = get_groups(player_ids, n_teams)
-
-    for _ in range(1000):
-        random_swap(teams)
-
-        min_costs.append(min_cost)
+    for _ in range(5):
+        teams = get_groups(player_ids, N_TEAMS)
         cost = evaluate_teams(player_id_map, teams)
+
+        for _ in range(5000):
+            costs.append(cost)
+            teams_with_swap = random_swap(teams)
+            cost_with_swap = evaluate_teams(player_id_map, teams_with_swap)
+
+            if cost_with_swap < cost:
+                teams = deepcopy(teams_with_swap)
+                cost = cost_with_swap
 
         if cost < min_cost:
             min_cost = cost
             best_teams = deepcopy(teams)
 
+    print(min_cost)
     teams_with_names = [
         [player_id_map[player_id].name for player_id in team] for team in best_teams
     ]
@@ -92,16 +98,14 @@ def main(registrations_path: str):
 
     print(df_teams.to_markdown(index=False))
 
-    plt.plot([x[1] for x in min_costs])
+    plt.plot([cost for cost in costs])
     plt.xlabel("Iterations")
     plt.ylabel("Cost")
 
     plt.show()
 
 
-def evaluate_teams(
-    player_id_map: dict[int, Player], teams: list[list[int]]
-) -> tuple[int, float]:
+def evaluate_teams(player_id_map: dict[int, Player], teams: list[list[int]]):
     games_attended_ragged = [
         get_team_stats(player_id_map, team, "games_attended") for team in teams
     ]
@@ -197,13 +201,17 @@ def get_groups(people: list, n_groups: int) -> list[str]:
     return groups
 
 
-def random_swap(groups: list[list]) -> None:
-    group_a, group_b = random.sample(groups, 2)
+def random_swap(groups: list[list]) -> list[list]:
+    groups_copy = deepcopy(groups)
+
+    group_a, group_b = random.sample(groups_copy, 2)
 
     index_a = random.randrange(len(group_a))
     index_b = random.randrange(len(group_b))
 
     group_a[index_a], group_b[index_b] = group_b[index_b], group_a[index_a]
+
+    return groups_copy
 
 
 def pad_with_nans(rows: list) -> np.ndarray:
