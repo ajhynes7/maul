@@ -24,6 +24,7 @@ def main(registrations_path: str):
         parity_players = session.exec(statement).all()
 
     players = get_registered_players(registrations_path, parity_players)
+
     player_id_map = {player.id: player for player in players}
     player_ids = list(player_id_map.keys())
 
@@ -109,31 +110,29 @@ def evaluate_teams(player_id_map: dict[int, Player], teams: list[list[int]]):
     unknowns = [np.isnan(x).sum() for x in games_attended_ragged]
     unknown_cost = np.ptp(unknowns)
 
-    games_attended = np.array(pad_with_nans(games_attended_ragged))
-
-    goals = np.array(
-        pad_with_nans([get_team_stats(player_id_map, team, "goals") for team in teams])
-    )
-    assists = np.array(
+    goals_per_game = np.array(
         pad_with_nans(
-            [get_team_stats(player_id_map, team, "assists") for team in teams]
+            [get_team_stats(player_id_map, team, "goals_per_game") for team in teams]
         )
     )
-    second_assists = np.array(
+    assists_per_game = np.array(
         pad_with_nans(
-            [get_team_stats(player_id_map, team, "second_assists") for team in teams]
+            [get_team_stats(player_id_map, team, "assists_per_game") for team in teams]
         )
     )
-    d_blocks = np.array(
+    second_assists_per_game = np.array(
         pad_with_nans(
-            [get_team_stats(player_id_map, team, "d_blocks") for team in teams]
+            [
+                get_team_stats(player_id_map, team, "second_assists_per_game")
+                for team in teams
+            ]
         )
     )
-
-    goals_per_game = goals / games_attended
-    assists_per_game = assists / games_attended
-    second_assists_per_game = second_assists / games_attended
-    d_blocks_per_game = d_blocks / games_attended
+    d_blocks_per_game = np.array(
+        pad_with_nans(
+            [get_team_stats(player_id_map, team, "d_blocks_per_game") for team in teams]
+        )
+    )
 
     mean_goals_per_game = np.nanmean(goals_per_game, axis=1)
     mean_assists_per_game = np.nanmean(assists_per_game, axis=1)
