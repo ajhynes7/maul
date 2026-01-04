@@ -87,6 +87,7 @@ def get_registered_players(
         player for player in parity_players if player.name in registered_player_names
     ]
     non_parity_players = set(registered_player_names) - set(parity_player_names)
+    print(f"Non-parity players: {non_parity_players - set(extra_stats.keys())}")
 
     parity_player_ids = [p.id for p in parity_players]
     id_ = max(parity_player_ids) + 1
