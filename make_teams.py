@@ -37,7 +37,7 @@ def main(registrations_path: str):
         teams = get_groups(player_ids, N_TEAMS)
         cost = evaluate_teams(player_id_map, teams)
 
-        for _ in range(1000):
+        for _ in range(10_000):
             costs.append(cost)
             teams_with_swap = random_swap(teams)
             cost_with_swap = evaluate_teams(player_id_map, teams_with_swap)
