@@ -1,17 +1,17 @@
 import argparse
 import math
-import os
 
 import numpy as np
 import pandas as pd
-import yagmail
 from sqlmodel import Session, create_engine, select
 
 from models.player import Player
 
 
 def main(
-    percentage: float, trade_rules: bool, include_stats: bool, send_email: bool
+    percentage: float,
+    trade_rules: bool,
+    include_stats: bool,
 ) -> None:
     engine = create_engine("sqlite:///maul.db")
 
@@ -40,7 +40,7 @@ def main(
     salary_cap = mean_team_salary * (1 + rel_diff)
 
     salary_range = team_salaries.max() - team_salaries.min()
-    email_contents = [
+    results = [
         f"Initial team salary range: ${salary_range:,.0f}\n",
         None,
     ]
@@ -53,7 +53,7 @@ def main(
         teams_over_cap = team_numbers[team_salaries > salary_cap]
 
         if not teams_under_floor.any() and not teams_over_cap.any():
-            email_contents.append("\nAll team salaries are between the floor and cap.")
+            results.append("\nAll team salaries are between the floor and cap.")
 
             break
 
@@ -64,7 +64,7 @@ def main(
         )
 
         if not best_trade:
-            email_contents.append("\nNo better trade could be found.")
+            results.append("\nNo better trade could be found.")
             break
 
         player_index_i, player_index_j = best_trade
@@ -95,46 +95,30 @@ def main(
         salary_range = team_salaries.max() - team_salaries.min()
         found_trades = True
 
-        email_contents.append(
+        results.append(
             f"- {player_name_i} (team {team_number_i}) for {player_name_j} (team {team_number_j})"
         )
-        email_contents.append(f"\t- New team salary range: ${salary_range:,.0f}")
+        results.append(f"\t- New team salary range: ${salary_range:,.0f}")
 
-    email_contents[1] = "Found trades:\n" if found_trades else "No trades found.\n"
+    results[1] = "Found trades:\n" if found_trades else "No trades found.\n"
 
-    email_contents.append(f"\nSalary floor: ${salary_floor.round():,.0f}")
-    email_contents.append(f"Salary cap: ${salary_cap.round():,.0f}")
+    results.append(f"\nSalary floor: ${salary_floor.round():,.0f}")
+    results.append(f"Salary cap: ${salary_cap.round():,.0f}")
 
     team_sums = df.groupby("team").sum()
-    email_contents.append(
+    results.append(
         "\nTeam salaries: " + ", ".join([f"${x:,.0f}" for x in team_sums["salary"]])
     )
-    email_contents.append(
+    results.append(
         "\nExpected team goals: "
         + ", ".join([f"{x:.0f}" for x in team_sums["goals_per_game"]])
     )
-    email_contents.append(
+    results.append(
         "Expected team assists: "
         + ", ".join([f"{x:.0f}" for x in team_sums["assists_per_game"]])
     )
 
-    print("\n".join(email_contents))
-
-    if send_email:
-        MAUL_EMAIL = os.getenv("MAUL_EMAIL")
-        MAUL_PASSWORD = os.getenv("MAUL_PASSWORD")
-
-        if not MAUL_EMAIL or not MAUL_PASSWORD:
-            raise ValueError("Email/password not set.")
-
-        with yagmail.SMTP(MAUL_EMAIL, MAUL_PASSWORD) as yag:
-            yag.send(
-                to="andrewjhynes@gmail.com",
-                subject="MAUL test",
-                contents="\n".join(email_contents),
-            )
-
-        print("\nSent email successfully.")
+    print("\n".join(results))
 
 
 def find_best_trade(
@@ -247,8 +231,7 @@ if __name__ == "__main__":
     parser.add_argument("--percentage", type=float, default=0.35)
     parser.add_argument("--trade-rules", action="store_true")
     parser.add_argument("--include-stats", action="store_true")
-    parser.add_argument("--send-email", action="store_true")
 
     args = parser.parse_args()
 
-    main(args.percentage, args.trade_rules, args.include_stats, args.send_email)
+    main(args.percentage, args.trade_rules, args.include_stats)
