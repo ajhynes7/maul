@@ -109,14 +109,16 @@ def main(
     results.append(
         "\nTeam salaries: " + ", ".join([f"${x:,.0f}" for x in team_sums["salary"]])
     )
-    results.append(
-        "\nExpected team goals: "
-        + ", ".join([f"{x:.0f}" for x in team_sums["goals_per_game"]])
-    )
-    results.append(
-        "Expected team assists: "
-        + ", ".join([f"{x:.0f}" for x in team_sums["assists_per_game"]])
-    )
+
+    if include_stats:
+        results.append(
+            "\nExpected team goals: "
+            + ", ".join([f"{x:.0f}" for x in team_sums["goals_per_game"]])
+        )
+        results.append(
+            "Expected team assists: "
+            + ", ".join([f"{x:.0f}" for x in team_sums["assists_per_game"]])
+        )
 
     print("\n".join(results))
 
@@ -228,7 +230,7 @@ def find_best_trade(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--percentage", type=float, default=0.35)
+    parser.add_argument("--percentage", type=float, default=5)
     parser.add_argument("--trade-rules", action="store_true")
     parser.add_argument("--include-stats", action="store_true")
 

@@ -8,7 +8,7 @@ class Player(SQLModel, table=True):
 
     name: str = Field(unique=True, nullable=False)
 
-    salary: float = Field(default=0)
+    salary: float = Field(nullable=True)
     team: int = Field(nullable=False)
 
     trade_count: int = Field(default=0)

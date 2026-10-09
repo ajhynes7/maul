@@ -8,10 +8,10 @@ import pandas as pd
 class SheetReader:
     def __init__(self):
         client = gspread.service_account()
-        self.sheet = client.open("2025 MAUL Parity League Master Sheet")
+        self.sheet = client.open("2026 MAUL Parity League Master Sheet")
 
     def read_team_composition_worksheet(self) -> pd.DataFrame:
-        df = pd.DataFrame(self.sheet.worksheet("Team Composition").get("A2:H13"))
+        df = pd.DataFrame(self.sheet.worksheet("Team Composition").get("A2:H14"))
 
         arr = df.values
         n_members = len(arr)
@@ -29,8 +29,9 @@ class SheetReader:
         )
 
         df["team"] = pd.to_numeric(df["team"]).astype(int)
-        df["salary"] = (
-            df["salary"].str.replace("$", "").str.replace(",", "").astype(float)
+        df["salary"] = pd.to_numeric(
+            df["salary"].str.replace("$", "").str.replace(",", ""),
+            errors="coerce",
         )
 
         df = df.map(lambda x: x.strip() if isinstance(x, str) else x)
