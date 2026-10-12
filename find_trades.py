@@ -99,7 +99,8 @@ def main(
 
     results[1] = "Found trades:\n" if found_trades else "No trades found.\n"
 
-    results.append(f"\nSalary floor: ${salary_floor.round():,.0f}")
+    results.append(f"\nMean team salary: ${mean_team_salary.round():,.0f}")
+    results.append(f"Salary floor: ${salary_floor.round():,.0f}")
     results.append(f"Salary cap: ${salary_cap.round():,.0f}")
 
     team_sums = df.groupby("team").sum()
