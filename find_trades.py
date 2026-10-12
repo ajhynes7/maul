@@ -21,9 +21,6 @@ def main(
 
     df = pd.DataFrame([player.model_dump() for player in players])
 
-    if (df["salary"] <= 0).any():
-        raise ValueError("All salaries should be positive.")
-
     df["goals_per_game"] = df["goals"] / df["games_attended"]
     df["assists_per_game"] = df["assists"] / df["games_attended"]
 
