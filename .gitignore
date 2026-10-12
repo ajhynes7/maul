@@ -2,7 +2,6 @@
 *.csv
 *.db
 *.ipynb
-*.json
 *.py[oc]
 *.xlsx
 .ipynb_checkpoints
