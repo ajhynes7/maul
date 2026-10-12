@@ -38,7 +38,12 @@ def main(
 
     salary_range = team_salaries.max() - team_salaries.min()
     results = [
-        f"Initial team salary range: ${salary_range:,.0f}\n",
+        "\nInitial team salaries: "
+        + ", ".join([f"${x:,.0f}" for x in team_sums["salary"]]),
+        f"Initial team salary range: ${salary_range:,.0f}",
+        f"\nMean team salary: ${mean_team_salary.round():,.0f}",
+        f"Salary floor: ${salary_floor.round():,.0f}",
+        f"Salary cap: ${salary_cap.round():,.0f}",
         None,
     ]
 
@@ -50,7 +55,7 @@ def main(
         teams_over_cap = team_numbers[team_salaries > salary_cap]
 
         if not teams_under_floor.any() and not teams_over_cap.any():
-            results.append("\nAll team salaries are between the floor and cap.")
+            results.append("\nAll team salaries are now between the floor and cap.")
 
             break
 
@@ -97,15 +102,13 @@ def main(
         )
         results.append(f"\t- New team salary range: ${salary_range:,.0f}")
 
-    results[1] = "Found trades:\n" if found_trades else "No trades found.\n"
-
-    results.append(f"\nMean team salary: ${mean_team_salary.round():,.0f}")
-    results.append(f"Salary floor: ${salary_floor.round():,.0f}")
-    results.append(f"Salary cap: ${salary_cap.round():,.0f}")
+    none_index = results.index(None)
+    results[none_index] = "\nFound trades:\n" if found_trades else "No trades found.\n"
 
     team_sums = df.groupby("team").sum()
     results.append(
-        "\nTeam salaries: " + ", ".join([f"${x:,.0f}" for x in team_sums["salary"]])
+        "\nFinal team salaries: "
+        + ", ".join([f"${x:,.0f}" for x in team_sums["salary"]])
     )
 
     if include_stats:
