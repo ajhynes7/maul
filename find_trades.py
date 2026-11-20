@@ -111,15 +111,14 @@ def main(
         + ", ".join([f"${x:,.0f}" for x in team_sums["salary"]])
     )
 
-    if include_stats:
-        results.append(
-            "\nExpected team goals: "
-            + ", ".join([f"{x:.0f}" for x in team_sums["goals_per_game"]])
-        )
-        results.append(
-            "Expected team assists: "
-            + ", ".join([f"{x:.0f}" for x in team_sums["assists_per_game"]])
-        )
+    results.append(
+        "\nExpected team goals: "
+        + ", ".join([f"{x:.0f}" for x in team_sums["goals_per_game"]])
+    )
+    results.append(
+        "Expected team assists: "
+        + ", ".join([f"{x:.0f}" for x in team_sums["assists_per_game"]])
+    )
 
     print("\n".join(results))
 
