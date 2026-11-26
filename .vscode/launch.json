@@ -10,6 +10,7 @@
             "request": "launch",
             "program": "find_trades.py",
             "console": "integratedTerminal",
+            "args": ["--include-stats", "--percentage=3"]
         },
         {
             "name": "Update database",

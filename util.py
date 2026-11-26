@@ -10,8 +10,8 @@ class SheetReader:
         client = gspread.service_account()
         self.sheet = client.open("2026 MAUL Parity League Master Sheet")
 
-    def read_team_composition_worksheet(self) -> pd.DataFrame:
-        df = pd.DataFrame(self.sheet.worksheet("Team Composition").get("A2:H14"))
+    def read_team_composition_worksheet(self, worksheet_name: str) -> pd.DataFrame:
+        df = pd.DataFrame(self.sheet.worksheet(worksheet_name).get("A2:H14"))
 
         arr = df.values
         n_members = len(arr)

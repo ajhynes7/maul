@@ -1,16 +1,21 @@
+import argparse
 from sqlmodel import Session, SQLModel, create_engine, text
 
 from models.player import Player
 from util import SheetReader
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sheet", type=str, default="Team Composition")
+    args = parser.parse_args()
+
     db_filename = "maul.db"
     engine = create_engine(f"sqlite:///{db_filename}")
 
     SQLModel.metadata.create_all(engine)
 
     reader = SheetReader()
-    df_salaries = reader.read_team_composition_worksheet()
+    df_salaries = reader.read_team_composition_worksheet(args.sheet)
     trade_counts, traded_last_time = reader.read_trades_worksheet()
 
     df_stats = reader.read_player_database_worksheet()
